@@ -1,3 +1,6 @@
+// ── CONFIGURATION & API KEYS ──
+const GEMINI_API_KEY = "AIzaSyBbLFPSo6L3Ba-EwsUS4e7BarglXCYqERA"; // Replace with your key from aistudio.google.com
+
 // ── PERSONA DATA ──
 const personaData = {
     health: {
@@ -166,51 +169,34 @@ const personaDisplay = {
 
 // ── PARAMETER DEFINITIONS ──
 const allParams = [
-    // General (only 4!)
     { id: 'aqi', label: 'AQI', icon: 'fa-smog', cat: 'general', active: true },
     { id: 'uv', label: 'UV Index', icon: 'fa-sun', cat: 'general', active: true },
     { id: 'humidity', label: 'Humidity', icon: 'fa-tint', cat: 'general', active: true },
     { id: 'feelslike', label: 'Feels Like', icon: 'fa-thermometer', cat: 'general', active: true },
-
-    // Health
     { id: 'pollen', label: 'Pollen count', icon: 'fa-allergies', cat: 'health', active: false },
     { id: 'pm25', label: 'PM2.5/PM10', icon: 'fa-microscope', cat: 'health', active: false },
     { id: 'mold', label: 'Mold risk', icon: 'fa-biohazard', cat: 'health', active: false },
-
-    // Fitness
     { id: 'heatstress', label: 'Heat stress', icon: 'fa-temperature-high', cat: 'fitness', active: false },
     { id: 'workout', label: 'Best workout time', icon: 'fa-clock', cat: 'fitness', active: false },
     { id: 'sunexposure', label: 'Sun exposure duration', icon: 'fa-sun', cat: 'fitness', active: false },
     { id: 'comfort', label: 'Activity comfort score', icon: 'fa-smile', cat: 'fitness', active: false },
-
-    // Beach
     { id: 'waveheight', label: 'Wave height', icon: 'fa-water', cat: 'beach', active: false },
     { id: 'tide', label: 'Tide timings', icon: 'fa-clock', cat: 'beach', active: false },
     { id: 'seatemp', label: 'Sea temperature', icon: 'fa-thermometer-half', cat: 'beach', active: false },
     { id: 'ripcurrent', label: 'Rip-current risk', icon: 'fa-exclamation-triangle', cat: 'beach', active: false },
-
-    // Travel
     { id: 'routeweather', label: 'Weather along route', icon: 'fa-route', cat: 'travel', active: false },
     { id: 'flightrisk', label: 'Flight-weather risk', icon: 'fa-plane', cat: 'travel', active: false },
     { id: 'packing', label: 'Packing recommendation', icon: 'fa-suitcase', cat: 'travel', active: false },
-
-    // Family
     { id: 'schoolrisk', label: 'School commute risk', icon: 'fa-school', cat: 'parents', active: false },
     { id: 'playground', label: 'Playground suitability', icon: 'fa-park', cat: 'parents', active: false },
     { id: 'airqualityrisk', label: 'Air-quality risk', icon: 'fa-smog', cat: 'parents', active: false },
-
-    // Farmer
     { id: 'soilmoisture', label: 'Soil moisture', icon: 'fa-tint', cat: 'farm', active: false },
     { id: 'frostrisk', label: 'Frost risk', icon: 'fa-snowflake', cat: 'farm', active: false },
     { id: 'irrigation', label: 'Irrigation recommendation', icon: 'fa-tint', cat: 'farm', active: false },
     { id: 'croprisk', label: 'Crop/plant risk', icon: 'fa-seedling', cat: 'farm', active: false },
-
-    // Commuter
     { id: 'roadflood', label: 'Road-flood risk', icon: 'fa-car-crash', cat: 'commute', active: false },
     { id: 'crosswind', label: 'Crosswind risk', icon: 'fa-wind', cat: 'commute', active: false },
     { id: 'fogrisk', label: 'Fog risk', icon: 'fa-smog', cat: 'commute', active: false },
-
-    // Event
     { id: 'rainprob', label: 'Rain probability', icon: 'fa-percent', cat: 'events', active: false },
     { id: 'rainfree', label: 'Rain-free window', icon: 'fa-cloud-sun', cat: 'events', active: false },
     { id: 'outdoorcomfort', label: 'Outdoor comfort index', icon: 'fa-smile', cat: 'events', active: false },
@@ -218,12 +204,14 @@ const allParams = [
     { id: 'eventconfidence', label: 'Weather confidence', icon: 'fa-check-circle', cat: 'events', active: false },
 ];
 
+const categories = ['general', 'health', 'fitness', 'beach', 'travel', 'farm', 'commute', 'events', 'parents', 'construction'];
+
 // ── STATE ──
 let selectedPersona = localStorage.getItem('weatherAwarePersona') || 'general';
 let tempSelected = selectedPersona;
 let currentTab = 'forecast';
 let currentCategory = null;
-let paramState = loadParamState();
+let currentWeatherData = null;
 
 // ── DOM REFS ──
 const overlay = document.getElementById('settingsOverlay');
@@ -255,11 +243,130 @@ const paramBack = document.getElementById('paramBack');
 const paramPanelTitle = document.getElementById('paramPanelTitle');
 const paramCategoryView = document.getElementById('paramCategoryView');
 const paramParameterView = document.getElementById('paramParameterView');
+const bgElement = document.getElementById('weatherBg');
+const conditionText = document.getElementById('conditionText');
 
-// ── CATEGORIES ──
-const categories = ['general', 'health', 'fitness', 'beach', 'travel', 'farm', 'commute', 'events', 'parents', 'construction'];
+// ── LIVE WEATHER API (OPEN-METEO) ──
+async function fetchLiveWeather(lat = 22.69, lon = 72.86, locName = "Nadiad, Gujarat") {
+    try {
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,uv_index&hourly=temperature_2m,precipitation_probability,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto`;
+        const res = await fetch(url);
+        const data = await res.json();
+        currentWeatherData = data;
+        updateWeatherUI(data, locName);
+    } catch (err) {
+        console.warn("Live weather fetch failed, running with offline presets:", err);
+    }
+}
 
-// ── PARAM STATE ──
+function getWeatherCondition(code) {
+    if (code === 0) return { label: 'Clear Sky', icon: 'fa-sun', bg: 'clear' };
+    if ([1, 2, 3].includes(code)) return { label: 'Partly Cloudy', icon: 'fa-cloud-sun', bg: 'cloudy' };
+    if ([45, 48].includes(code)) return { label: 'Foggy', icon: 'fa-smog', bg: 'fog' };
+    if ([51, 53, 55, 61, 63, 65, 80, 81, 82].includes(code)) return { label: 'Rainy', icon: 'fa-cloud-showers-heavy', bg: 'rainy' };
+    if ([95, 96, 99].includes(code)) return { label: 'Thunderstorm', icon: 'fa-bolt', bg: 'thunder' };
+    return { label: 'Mainly Clear', icon: 'fa-cloud-sun', bg: 'clear' };
+}
+
+function updateWeatherUI(data, locName) {
+    const cur = data.current;
+    const cond = getWeatherCondition(cur.weather_code);
+
+    const locEl = document.querySelector('.location');
+    if (locEl) locEl.innerHTML = `<i class="fas fa-location-dot"></i> ${locName} <span>• Live</span>`;
+
+    const bigTemp = document.querySelector('.big-temp');
+    const feelsLike = document.querySelector('.feels-like strong');
+    if (bigTemp) bigTemp.textContent = Math.round(cur.temperature_2m);
+    if (feelsLike) feelsLike.textContent = `${Math.round(cur.apparent_temperature)}°`;
+
+    if (conditionText) conditionText.textContent = cond.label;
+    const weatherIcon = document.querySelector('.weather-icon i');
+    if (weatherIcon) weatherIcon.className = `fas ${cond.icon}`;
+
+    setWeatherBackground(cond.bg);
+
+    const condDetail = document.querySelector('.condition-row .cond-detail');
+    if (condDetail) {
+        condDetail.innerHTML = `
+            <span><i class="fas fa-wind"></i> ${Math.round(cur.wind_speed_10m)} km/h</span>
+            <span><i class="fas fa-droplet"></i> ${cur.relative_humidity_2m}%</span>
+        `;
+    }
+
+    renderStats();
+}
+
+function detectLocation() {
+    if ("geolocation" in navigator) {
+        navigator.geolocation.getCurrentPosition(
+            (pos) => fetchLiveWeather(pos.coords.latitude, pos.coords.longitude, "My Location"),
+            () => fetchLiveWeather()
+        );
+    } else {
+        fetchLiveWeather();
+    }
+}
+
+// ── PERSISTENT ADVISOR AI (GEMINI + LOCALSTORAGE MEMORY) ──
+function getUserMemories() {
+    return JSON.parse(localStorage.getItem('mausam_advisor_memories') || '[]');
+}
+
+function saveUserMemory(fact) {
+    const memories = getUserMemories();
+    if (!memories.includes(fact)) {
+        memories.push(fact);
+        localStorage.setItem('mausam_advisor_memories', JSON.stringify(memories));
+    }
+}
+
+async function callAdvisorAI(userQuery) {
+    if (!GEMINI_API_KEY || GEMINI_API_KEY === "YOUR_FREE_GEMINI_API_KEY") {
+        return "👋 Hi! Please add your free Gemini API key in `script.js` to enable real-time intelligent conversations.";
+    }
+
+    const currentPersona = selectedPersona || 'general';
+    const memoryList = getUserMemories().map(m => `- ${m}`).join('\n');
+    const weatherSummary = currentWeatherData ? JSON.stringify(currentWeatherData.current) : "27°C, Partly Cloudy, Light Breeze";
+
+    const systemInstruction = `You are Mausam AdvisorAI, an intelligent weather companion.
+Current Live Weather: ${weatherSummary}
+User Persona: ${currentPersona}
+Known User Profile & Past Memories:
+${memoryList || 'No previous user profile records.'}
+
+Rules:
+1. Provide a concise, highly tailored answer (2-3 sentences max).
+2. If the user mentions any personal routine, allergy, preferred workout hour, or travel plan, extract that exact fact and append on a new line strictly as: "[MEMORY]: <extracted fact>".`;
+
+    try {
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ role: 'user', parts: [{ text: `${systemInstruction}\n\nUser Question: ${userQuery}` }] }]
+            })
+        });
+
+        const data = await res.json();
+        let reply = data.candidates[0].content.parts[0].text;
+
+        if (reply.includes('[MEMORY]:')) {
+            const parts = reply.split('[MEMORY]:');
+            reply = parts[0].trim();
+            const fact = parts[1].trim();
+            if (fact) saveUserMemory(fact);
+        }
+
+        return reply;
+    } catch (err) {
+        console.error("Gemini API Error:", err);
+        return "I'm having trouble connecting right now. Please check your internet connection.";
+    }
+}
+
+// ── PARAMETER PANEL LOGIC ──
 function loadParamState() {
     const saved = localStorage.getItem('mausamParams');
     if (saved) {
@@ -271,7 +378,6 @@ function loadParamState() {
             return parsed;
         } catch (e) { /* ignore */ }
     }
-    // Defaults: only aqi, uv, humidity, feelslike on
     allParams.forEach(p => p.active = false);
     const defaults = ['aqi', 'uv', 'humidity', 'feelslike'];
     allParams.forEach(p => {
@@ -286,7 +392,6 @@ function saveParamState() {
     const state = {};
     allParams.forEach(p => { state[p.id] = p.active; });
     localStorage.setItem('mausamParams', JSON.stringify(state));
-    paramState = state;
     updateParamStats();
 }
 
@@ -409,11 +514,18 @@ function renderStats() {
         statsGrid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:rgba(255,255,255,0.2);padding:20px;">No active parameters. Tap + to add.</div>`;
         return;
     }
+    
+    const cur = currentWeatherData ? currentWeatherData.current : null;
+    const liveHumid = cur ? `${cur.relative_humidity_2m}%` : '84%';
+    const liveWind = cur ? `${Math.round(cur.wind_speed_10m)} km/h` : '8 km/h';
+    const liveUV = cur && cur.uv_index !== undefined ? `${Math.round(cur.uv_index)}` : '6';
+    const liveFeels = cur ? `${Math.round(cur.apparent_temperature)}°` : '33°';
+
     const valueMap = {
         aqi: { value: '42', sub: 'Good' },
-        uv: { value: '6', sub: 'High' },
-        humidity: { value: '84%', sub: 'High' },
-        feelslike: { value: '33°', sub: 'Humid' },
+        uv: { value: liveUV, sub: Number(liveUV) > 5 ? 'High' : 'Moderate' },
+        humidity: { value: liveHumid, sub: 'Comfortable' },
+        feelslike: { value: liveFeels, sub: 'Humid' },
         pollen: { value: 'Low', sub: '8 grains' },
         pm25: { value: '12 µg/m³', sub: 'Good' },
         mold: { value: 'Low', sub: 'Safe' },
@@ -436,14 +548,15 @@ function renderStats() {
         irrigation: { value: 'Water', sub: 'Today' },
         croprisk: { value: 'Low', sub: 'Favorable' },
         roadflood: { value: 'None', sub: 'Dry' },
-        crosswind: { value: 'Low', sub: 'Safe' },
+        crosswind: { value: liveWind, sub: 'Safe' },
         fogrisk: { value: 'None', sub: 'Clear' },
         rainprob: { value: '25%', sub: 'Sat PM' },
         rainfree: { value: 'Yes', sub: 'Window' },
         outdoorcomfort: { value: '78°F', sub: 'Excellent' },
-        windgustrisk: { value: 'Low', sub: 'Safe' },
+        windgustrisk: { value: liveWind, sub: 'Safe' },
         eventconfidence: { value: 'High', sub: 'Good' },
     };
+
     let html = '';
     active.forEach(p => {
         const info = valueMap[p.id] || { value: '—', sub: '' };
@@ -589,19 +702,20 @@ function switchTab(tab) {
 }
 
 // ── WEATHER BACKGROUND ──
-const bgElement = document.getElementById('weatherBg');
-const conditionText = document.getElementById('conditionText');
-
 function setWeatherBackground(condition) {
+    if (!bgElement) return;
     bgElement.className = 'weather-bg';
     const cond = condition.toLowerCase();
-    document.getElementById('particlesLayer').innerHTML = '';
+    const particlesLayer = document.getElementById('particlesLayer');
     const flash = document.getElementById('flashLayer');
     const stars = document.getElementById('starsLayer');
     const fog = document.getElementById('fogLayer');
-    flash.style.display = 'none';
-    stars.style.display = 'none';
-    fog.style.display = 'none';
+
+    if (particlesLayer) particlesLayer.innerHTML = '';
+    if (flash) flash.style.display = 'none';
+    if (stars) stars.style.display = 'none';
+    if (fog) fog.style.display = 'none';
+
     let bgClass = 'clear';
     if (cond.includes('clear') || cond.includes('sunny') || cond.includes('sun')) {
         bgClass = 'clear';
@@ -609,26 +723,27 @@ function setWeatherBackground(condition) {
         bgClass = 'cloudy';
     } else if (cond.includes('rain') || cond.includes('drizzle') || cond.includes('shower')) {
         bgClass = 'rainy';
-        const container = document.getElementById('particlesLayer');
-        for (let i = 0; i < 40; i++) {
-            const p = document.createElement('div');
-            p.className = 'particle';
-            p.style.width = '1.5px';
-            p.style.height = (6 + Math.random() * 14) + 'px';
-            p.style.left = Math.random() * 100 + '%';
-            p.style.animationDuration = (0.4 + Math.random() * 0.7) + 's';
-            p.style.animationDelay = (Math.random() * 2) + 's';
-            container.appendChild(p);
+        if (particlesLayer) {
+            for (let i = 0; i < 40; i++) {
+                const p = document.createElement('div');
+                p.className = 'particle';
+                p.style.width = '1.5px';
+                p.style.height = (6 + Math.random() * 14) + 'px';
+                p.style.left = Math.random() * 100 + '%';
+                p.style.animationDuration = (0.4 + Math.random() * 0.7) + 's';
+                p.style.animationDelay = (Math.random() * 2) + 's';
+                particlesLayer.appendChild(p);
+            }
         }
     } else if (cond.includes('thunder') || cond.includes('storm') || cond.includes('lightning')) {
         bgClass = 'thunder';
-        flash.style.display = 'block';
+        if (flash) flash.style.display = 'block';
     } else if (cond.includes('night') || cond.includes('evening') || cond.includes('moon')) {
         bgClass = 'night';
-        stars.style.display = 'block';
+        if (stars) stars.style.display = 'block';
     } else if (cond.includes('fog') || cond.includes('mist') || cond.includes('haze')) {
         bgClass = 'fog';
-        fog.style.display = 'block';
+        if (fog) fog.style.display = 'block';
     }
     bgElement.classList.add(bgClass);
 }
@@ -643,29 +758,17 @@ function addMessage(text, sender = 'ai') {
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
-function handleSend() {
+async function handleSend() {
     const text = chatInput.value.trim();
     if (!text) return;
+
     addMessage(text, 'user');
     chatInput.value = '';
     sendBtn.disabled = true;
-    setTimeout(() => {
-        const responses = [
-            "🌤️ Based on current conditions, it's a great day for outdoor activities.",
-            "☔ There's a 25% chance of rain tonight. Keep an umbrella handy.",
-            "🏃 The best time for a run today is between 6-8 AM.",
-            "🧴 UV index is 6 today — don't forget sunscreen.",
-            "🚗 Traffic is moderate right now. Allow extra 10-15 minutes.",
-            "🌱 Soil moisture is at 42% — consider watering your plants.",
-            "🏄 The sea is calm with small waves. Great for swimming.",
-            "🧳 If you're traveling to London, pack a raincoat.",
-            "🎉 Saturday looks good for events with a 25% rain chance.",
-            "👨‍👩‍👧‍👦 School commute is clear today. UV is high, apply sunscreen.",
-        ];
-        const reply = responses[Math.floor(Math.random() * responses.length)];
-        addMessage(reply, 'ai');
-        sendBtn.disabled = false;
-    }, 800 + Math.random() * 600);
+
+    const reply = await callAdvisorAI(text);
+    addMessage(reply, 'ai');
+    sendBtn.disabled = false;
 }
 
 // ── NOTIFICATION ──
@@ -679,19 +782,14 @@ function closeNotif() {
 
 // ── INIT ──
 function init() {
-    // Persona
+    detectLocation();
+    loadParamState();
+
     if (!selectedPersona || !personaDisplay[selectedPersona]) {
         selectedPersona = 'general';
         localStorage.setItem('weatherAwarePersona', 'general');
     }
     renderHomePersona(selectedPersona);
-
-    // Background
-    const initialCondition = 'Mainly Clear';
-    setWeatherBackground(initialCondition);
-    conditionText.textContent = initialCondition;
-
-    // Stats
     renderStats();
 
     // ── EVENTS ──
@@ -761,31 +859,27 @@ function init() {
         if (e.key === 'Enter') handleSend();
     });
 
-    // ── DEMO: condition cycle ──
-    const conditions = ['Mainly Clear', 'Cloudy', 'Rainy', 'Thunderstorm', 'Night', 'Fog'];
-    let condIndex = 0;
-    document.querySelector('.weather-main').addEventListener('dblclick', function() {
-        condIndex = (condIndex + 1) % conditions.length;
-        const newCond = conditions[condIndex];
-        conditionText.textContent = newCond;
-        setWeatherBackground(newCond);
-        const iconMap = {
-            'Mainly Clear': 'fa-cloud-sun',
-            'Cloudy': 'fa-cloud',
-            'Rainy': 'fa-cloud-rain',
-            'Thunderstorm': 'fa-bolt',
-            'Night': 'fa-moon',
-            'Fog': 'fa-smog'
-        };
-        document.querySelector('.weather-icon i').className = 'fas ' + (iconMap[newCond] || 'fa-cloud-sun');
-    });
-
-    console.log('🌤️ WeatherAware — AdvisorAI ready.');
-    console.log('💡 Double-tap weather area to cycle backgrounds.');
-    console.log('🤖 Chat with AdvisorAI for weather tips!');
-    console.log('🗺️ Maps tab shows "Coming Soon..." placeholder.');
-    console.log('🔔 Notification center: tap bell icon.');
-    console.log('➕ Parameter panel: categories → parameters.');
+    // Demo double click condition cycle
+    const weatherMain = document.querySelector('.weather-main');
+    if (weatherMain) {
+        const conditions = ['Mainly Clear', 'Cloudy', 'Rainy', 'Thunderstorm', 'Night', 'Fog'];
+        let condIndex = 0;
+        weatherMain.addEventListener('dblclick', function() {
+            condIndex = (condIndex + 1) % conditions.length;
+            const newCond = conditions[condIndex];
+            conditionText.textContent = newCond;
+            setWeatherBackground(newCond);
+            const iconMap = {
+                'Mainly Clear': 'fa-cloud-sun',
+                'Cloudy': 'fa-cloud',
+                'Rainy': 'fa-cloud-rain',
+                'Thunderstorm': 'fa-bolt',
+                'Night': 'fa-moon',
+                'Fog': 'fa-smog'
+            };
+            document.querySelector('.weather-icon i').className = 'fas ' + (iconMap[newCond] || 'fa-cloud-sun');
+        });
+    }
 }
 
 document.addEventListener('DOMContentLoaded', init);
