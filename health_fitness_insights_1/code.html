@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Specialized Insights</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-variant": "#353437",
+                        "secondary-container": "#fe9400",
+                        "primary": "#adc6ff",
+                        "secondary-fixed": "#ffdcbf",
+                        "on-tertiary": "#1c0b9f",
+                        "surface-dim": "#131315",
+                        "tertiary-fixed": "#e2dfff",
+                        "on-error": "#690005",
+                        "on-surface": "#e4e2e4",
+                        "primary-fixed": "#d8e2ff",
+                        "surface-container": "#1f1f21",
+                        "on-primary-container": "#00285c",
+                        "on-primary-fixed": "#001a41",
+                        "outline": "#8b90a0",
+                        "surface": "#131315",
+                        "tertiary-fixed-dim": "#c2c1ff",
+                        "inverse-surface": "#e4e2e4",
+                        "secondary": "#ffbc7c",
+                        "on-secondary-fixed": "#2d1600",
+                        "secondary-fixed-dim": "#ffb874",
+                        "primary-container": "#4b8eff",
+                        "on-surface-variant": "#c1c6d7",
+                        "surface-container-low": "#1b1b1d",
+                        "inverse-on-surface": "#303032",
+                        "error": "#ffb4ab",
+                        "on-background": "#e4e2e4",
+                        "on-primary": "#002e69",
+                        "surface-bright": "#39393b",
+                        "on-secondary-fixed-variant": "#6a3b00",
+                        "outline-variant": "#414755",
+                        "error-container": "#93000a",
+                        "background": "#131315",
+                        "surface-container-lowest": "#0e0e10",
+                        "primary-fixed-dim": "#adc6ff",
+                        "tertiary-container": "#8382ff",
+                        "surface-container-high": "#2a2a2c",
+                        "on-tertiary-fixed": "#0c006a",
+                        "on-secondary": "#4b2800",
+                        "on-primary-fixed-variant": "#004493",
+                        "inverse-primary": "#005bc1",
+                        "surface-tint": "#adc6ff",
+                        "surface-container-highest": "#353437",
+                        "on-secondary-container": "#633700",
+                        "on-tertiary-fixed-variant": "#3631b4",
+                        "on-error-container": "#ffdad6",
+                        "tertiary": "#c2c1ff",
+                        "on-tertiary-container": "#150093"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "grid-gutter": "16px",
+                        "base": "8px",
+                        "container-padding": "20px",
+                        "stack-gap": "12px"
+                    },
+                    "fontFamily": {
+                        "label-caps": ["Inter"],
+                        "title-md": ["Inter"],
+                        "data-mono": ["Inter"],
+                        "display-temp": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-lg-mobile": ["Inter"]
+                    },
+                    "fontSize": {
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.1em", "fontWeight": "700" }],
+                        "title-md": ["20px", { "lineHeight": "28px", "fontWeight": "500" }],
+                        "data-mono": ["14px", { "lineHeight": "20px", "fontWeight": "500" }],
+                        "display-temp": ["96px", { "lineHeight": "116px", "letterSpacing": "-0.04em", "fontWeight": "700" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            border-left: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .progress-ring {
+            transition: stroke-dashoffset 0.5s ease-in-out;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+
+        .bg-atmospheric {
+            background: linear-gradient(180deg, rgba(19, 19, 21, 0.8) 0%, rgba(19, 19, 21, 1) 100%),
+                        radial-gradient(circle at 50% 0%, rgba(75, 142, 255, 0.15) 0%, transparent 50%);
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface antialiased min-h-screen pb-24 md:pb-0 md:pt-20 bg-atmospheric font-body-md text-body-md overflow-x-hidden">
+<!-- TopAppBar -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-container-padding h-16 backdrop-blur-xl bg-white/10 border-white/20 transition-all duration-300 ease-in-out hidden md:flex">
+<div class="flex items-center gap-2"><a class="flex items-center gap-2" href="{{DATA:SCREEN:SCREEN_9}}"><span class="material-symbols-outlined text-primary">arrow_back</span><h1 class="font-headline-lg text-headline-lg text-on-surface font-bold tracking-tight">Mumbai, IN</h1></a></div>
+<div class="flex items-center gap-4">
+<a class="text-on-surface hover:text-primary transition-colors flex items-center justify-center" href="{{DATA:SCREEN:SCREEN_8}}">
+<span class="material-symbols-outlined">notifications</span>
+</a>
+<a class="w-8 h-8 rounded-full overflow-hidden border border-outline/50 hover:bg-white/5 cursor-pointer block" href="{{DATA:SCREEN:SCREEN_7}}">
+<img alt="User profile picture" class="w-full h-full object-cover" data-alt="A close-up portrait of an active fitness enthusiast looking confidently into the camera. The background is slightly blurred, showing an urban park setting with subtle sunlight filtering through trees, fitting a modern health app context. Atmospheric lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCCEoL5cCn0PLmdN7XYkydTu6cWtYBTCb3TbgpjRyEaCOSM_F3cWn2iMLpU2e6VpBWcyrA9C-g0UT1vOcxZnk2Z-hKjJPuCSC1FwiTmQKDfWIMCg8nPuQKJNPBYmQ8HfouDg5v2Jze72wgkaT0hjRHOcOZGapbdZ6KhKAlUNedlzQ1RK5pKtJig7XV4tHmQR6qy3lfr7GFTOKJPsonXnAoNqbjiTF2eId3zsHfADHS9C6PkdcGrUnoS_w"/>
+</a>
+</div>
+</header>
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-container-padding h-16 backdrop-blur-xl bg-white/10 border-white/20 transition-all duration-300 ease-in-out md:hidden">
+<div class="flex items-center gap-2"><a class="flex items-center gap-2" href="{{DATA:SCREEN:SCREEN_9}}"><span class="material-symbols-outlined text-primary">arrow_back</span><h1 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface font-bold tracking-tight">Mumbai, IN</h1></a></div>
+<div class="flex items-center gap-4">
+<a class="text-on-surface hover:text-primary transition-colors flex items-center justify-center" href="{{DATA:SCREEN:SCREEN_8}}">
+<span class="material-symbols-outlined">notifications</span>
+</a>
+<a class="w-8 h-8 rounded-full overflow-hidden border border-outline/50 hover:bg-white/5 cursor-pointer block" href="{{DATA:SCREEN:SCREEN_7}}">
+<img alt="User profile picture" class="w-full h-full object-cover" data-alt="A close-up portrait of an active fitness enthusiast looking confidently into the camera. The background is slightly blurred, showing an urban park setting with subtle sunlight filtering through trees, fitting a modern health app context. Atmospheric lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCrtLBiuSQtRfB-fcd5yr0ZvkV2b7mnKpGAA2X7jE7-3ouj-w9D-lVQYhynayFg-bL-3HETbWFT4vgrBejJFQnnFErm8a2xH_7LjRSur6epwCpmqDtm3OcfMErpSECZrHj9fxX76JmWyMyGU-X1OQ8DwuT7Lu9ltHwJgtonXsSHOEYiqTQDaMrnyK58n9QxrmUz4-jm13kEP686YNySQmr2wXutcp2mmWK1LJQerYFkrN0hl-blQ59Jig"/>
+</a>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="w-full max-w-7xl mx-auto px-5 md:px-container-padding pt-20 md:pt-8 flex flex-col gap-grid-gutter md:grid md:grid-cols-12 md:gap-grid-gutter">
+<!-- Header Section -->
+<div class="md:col-span-12 mb-2">
+<h2 class="font-title-md text-title-md text-primary mb-1">Health &amp; Fitness</h2>
+<p class="text-on-surface-variant text-sm">Specialized Insights for your outdoor activities</p>
+</div>
+<!-- AQI Card (Spans 8 cols on desktop) -->
+<section class="glass-panel rounded-xl p-4 flex flex-col md:col-span-8 relative overflow-hidden">
+<!-- Ambient Glow -->
+<div class="absolute -top-10 -right-10 w-32 h-32 bg-secondary-container/20 rounded-full blur-3xl"></div>
+<div class="flex justify-between items-start mb-4 relative z-10">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary">air</span>
+<h3 class="font-label-caps text-label-caps text-on-surface uppercase tracking-wider">Air Quality</h3>
+</div>
+<div class="bg-secondary-container/20 text-secondary-container px-2 py-1 rounded-full text-xs font-bold uppercase tracking-wide">
+                    Moderate
+                </div>
+</div>
+<div class="flex flex-col md:flex-row items-center gap-6 relative z-10 h-full">
+<!-- Circular Chart -->
+<div class="relative w-32 h-32 shrink-0 flex items-center justify-center">
+<svg class="w-full h-full" viewbox="0 0 100 100">
+<circle cx="50" cy="50" fill="none" r="45" stroke="rgba(255,255,255,0.1)" stroke-width="8"></circle>
+<circle class="progress-ring" cx="50" cy="50" fill="none" r="45" stroke="#fe9400" stroke-dasharray="282.7" stroke-dashoffset="113" stroke-linecap="round" stroke-width="8" style="stroke-dashoffset: 113;"></circle>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center text-center">
+<span class="font-headline-lg text-headline-lg text-on-surface font-bold">115</span>
+<span class="font-label-caps text-label-caps text-on-surface-variant">AQI</span>
+</div>
+</div>
+<!-- Detailed Metrics -->
+<div class="flex-1 w-full grid grid-cols-2 gap-4">
+<div class="bg-surface-variant/30 rounded-lg p-3">
+<div class="flex items-center justify-between mb-1">
+<span class="font-label-caps text-label-caps text-on-surface-variant">PM2.5</span>
+<span class="text-xs text-secondary font-medium">Unhealthy</span>
+</div>
+<div class="flex items-end gap-1">
+<span class="font-title-md text-title-md font-bold">42.5</span>
+<span class="text-xs text-on-surface-variant mb-1">µg/m³</span>
+</div>
+<div class="w-full h-1 bg-surface-container-high rounded-full mt-2 overflow-hidden">
+<div class="h-full bg-secondary w-3/4 rounded-full"></div>
+</div>
+</div>
+<div class="bg-surface-variant/30 rounded-lg p-3">
+<div class="flex items-center justify-between mb-1">
+<span class="font-label-caps text-label-caps text-on-surface-variant">PM10</span>
+<span class="text-xs text-primary font-medium">Fair</span>
+</div>
+<div class="flex items-end gap-1">
+<span class="font-title-md text-title-md font-bold">58.2</span>
+<span class="text-xs text-on-surface-variant mb-1">µg/m³</span>
+</div>
+<div class="w-full h-1 bg-surface-container-high rounded-full mt-2 overflow-hidden">
+<div class="h-full bg-primary w-1/2 rounded-full"></div>
+</div>
+</div>
+<div class="col-span-2 text-sm text-on-surface-variant mt-2 border-t border-white/5 pt-2 flex items-start gap-2">
+<span class="material-symbols-outlined text-secondary text-sm shrink-0">info</span>
+<p class="">Sensitive individuals should limit prolonged outdoor exertion.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- UV & Skin Safety (Spans 4 cols on desktop) -->
+<section class="glass-panel rounded-xl p-4 flex flex-col md:col-span-4 relative overflow-hidden">
+<!-- Ambient Glow -->
+<div class="absolute bottom-0 right-0 w-40 h-40 bg-error/10 rounded-full blur-3xl"></div>
+<div class="flex items-center gap-2 mb-4 relative z-10">
+<span class="material-symbols-outlined text-error">wb_sunny</span>
+<h3 class="font-label-caps text-label-caps text-on-surface uppercase tracking-wider">UV &amp; Skin Safety</h3>
+</div>
+<div class="flex flex-col justify-between h-full relative z-10">
+<div class="flex items-end gap-3 mb-6">
+<span class="font-display-temp text-display-temp leading-none">8</span>
+<div class="pb-2">
+<span class="block font-title-md text-title-md font-bold text-error">Very High</span>
+<span class="text-sm text-on-surface-variant">UV Index</span>
+</div>
+</div>
+<div class="bg-error-container/20 border border-error/20 rounded-lg p-3 mb-2">
+<div class="flex items-center gap-2 mb-1">
+<span class="material-symbols-outlined text-error text-sm">timer</span>
+<span class="font-label-caps text-label-caps text-error">Time to Burn</span>
+</div>
+<span class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-on-error-container">25 mins</span>
+</div>
+<p class="text-xs text-on-surface-variant flex items-center gap-1 mt-auto">
+<span class="material-symbols-outlined text-[16px]">shield</span>
+                    SPF 50+ recommended for outdoor runs.
+                </p>
+</div>
+</section>
+<!-- Best Workout Times (Spans 8 cols) -->
+<section class="glass-panel rounded-xl p-4 flex flex-col md:col-span-8">
+<div class="flex justify-between items-center mb-6">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">fitness_center</span>
+<h3 class="font-label-caps text-label-caps text-on-surface uppercase tracking-wider">Outdoor Fitness</h3>
+</div>
+<div class="flex gap-2">
+<span class="flex items-center gap-1 text-xs text-on-surface-variant"><div class="w-2 h-2 rounded-full bg-primary"></div> Temp</span>
+<span class="flex items-center gap-1 text-xs text-on-surface-variant"><div class="w-2 h-2 rounded-full bg-tertiary"></div> Humidity</span>
+</div>
+</div>
+<div class="relative h-48 w-full">
+<!-- Mock Chart Area -->
+<div class="absolute inset-0 flex items-end justify-between px-2 pb-6">
+<!-- Bars/Lines Mockup -->
+<div class="w-1/12 h-1/2 bg-gradient-to-t from-primary/40 to-transparent rounded-t-sm border-t border-primary relative group">
+<div class="absolute -top-6 left-1/2 -translate-x-1/2 text-xs opacity-0 group-hover:opacity-100 transition-opacity bg-surface p-1 rounded border border-white/10">24°</div>
+</div>
+<div class="w-1/12 h-2/3 bg-gradient-to-t from-primary/40 to-transparent rounded-t-sm border-t border-primary"></div>
+<div class="w-1/12 h-4/5 bg-gradient-to-t from-primary/40 to-transparent rounded-t-sm border-t border-primary"></div>
+<div class="w-1/12 h-full bg-gradient-to-t from-primary/40 to-transparent rounded-t-sm border-t border-primary"></div>
+<div class="w-1/12 h-full bg-gradient-to-t from-primary/40 to-transparent rounded-t-sm border-t border-primary"></div>
+<div class="w-1/12 h-5/6 bg-gradient-to-t from-primary/40 to-transparent rounded-t-sm border-t border-primary"></div>
+<div class="w-1/12 h-3/5 bg-gradient-to-t from-primary/40 to-transparent rounded-t-sm border-t border-primary"></div>
+<!-- Humidity Overlay line (SVG Mock) -->
+<svg class="absolute inset-0 w-full h-full pb-6" preserveaspectratio="none">
+<path d="M 0 100 Q 100 80 200 120 T 400 40 T 600 90" fill="none" stroke="#c2c1ff" stroke-dasharray="4" stroke-width="2"></path>
+</svg>
+</div>
+<!-- X Axis Labels -->
+<div class="absolute bottom-0 w-full flex justify-between px-2 text-xs text-on-surface-variant font-data-mono">
+<span class="">6 AM</span>
+<span class="">9 AM</span>
+<span class="">12 PM</span>
+<span class="">3 PM</span>
+<span class="">6 PM</span>
+</div>
+<!-- Highlight 'Best Time' Zone -->
+<div class="absolute top-0 bottom-6 left-[10%] w-[25%] bg-primary/10 border-x border-primary/20 flex flex-col items-center justify-start pt-2">
+<span class="bg-primary text-on-primary text-[10px] font-bold px-2 py-0.5 rounded-full mb-1">BEST TIME</span>
+</div>
+</div>
+</section>
+<!-- Wind & Heat Alerts (Spans 4 cols) -->
+<section class="flex flex-col gap-grid-gutter md:col-span-4">
+<div class="glass-panel rounded-xl p-4 flex flex-col justify-center relative overflow-hidden">
+<div class="absolute -right-4 -bottom-4 opacity-10">
+<span class="material-symbols-outlined text-[100px]">air</span>
+</div>
+<div class="flex items-center gap-2 mb-2 relative z-10">
+<span class="material-symbols-outlined text-secondary">flag</span>
+<h3 class="font-label-caps text-label-caps text-on-surface uppercase tracking-wider">Wind Alert</h3>
+</div>
+<div class="flex items-end gap-2 relative z-10">
+<span class="font-headline-lg text-headline-lg font-bold">15</span>
+<span class="text-on-surface-variant mb-1 font-data-mono">km/h</span>
+</div>
+<p class="text-sm text-on-surface-variant mt-1 relative z-10">Headwind going East. Consider running West first.</p>
+</div>
+<div class="glass-panel rounded-xl p-4 flex flex-col justify-center relative overflow-hidden border-l-4 border-l-secondary">
+<div class="absolute -right-4 -bottom-4 opacity-10">
+<span class="material-symbols-outlined text-[100px]">thermostat</span>
+</div>
+<div class="flex items-center gap-2 mb-2 relative z-10">
+<span class="material-symbols-outlined text-secondary">local_fire_department</span>
+<h3 class="font-label-caps text-label-caps text-on-surface uppercase tracking-wider">Heat Index</h3>
+</div>
+<div class="flex items-end gap-2 relative z-10">
+<span class="font-headline-lg text-headline-lg font-bold">32°</span>
+<span class="text-on-surface-variant mb-1 font-data-mono">Feels like</span>
+</div>
+<p class="text-sm text-on-surface-variant mt-1 relative z-10">High humidity increasing perceived heat. Stay hydrated.</p>
+</div>
+</section>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-4 pt-2 backdrop-blur-2xl bg-white/10 shadow-lg md:hidden rounded-t-xl">
+<a class="flex flex-col items-center justify-center text-on-surface-variant/70 hover:text-primary transition-all" href="{{DATA:SCREEN:SCREEN_9}}">
+<span class="material-symbols-outlined">home_app_logo</span>
+<span class="font-label-caps text-label-caps">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-primary-container/30 text-primary rounded-xl px-3 py-1 scale-95 transition-transform" href="{{DATA:SCREEN:SCREEN_4}}">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+<span class="font-label-caps text-label-caps">Advisor</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant/70 hover:text-primary transition-all" href="{{DATA:SCREEN:SCREEN_10}}">
+<span class="material-symbols-outlined">map</span>
+<span class="font-label-caps text-label-caps">Explore</span>
+</a>
+</nav>
+<script>
+        // Simple script to animate the progress ring on load
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                const ring = document.querySelector('.progress-ring');
+                if(ring) {
+                    // Set offset for ~60% (AQI 115 in a hypothetical scale)
+                    ring.style.strokeDashoffset = '113'; 
+                }
+            }, 100);
+        });
+    </script>
+</body></html>

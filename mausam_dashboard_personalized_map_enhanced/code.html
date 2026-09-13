@@ -1,0 +1,334 @@
+<!DOCTYPE html><html class="dark" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Mausam - Personalized Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                            "surface-variant": "#353437",
+                            "secondary-container": "#fe9400",
+                            "primary": "#adc6ff",
+                            "secondary-fixed": "#ffdcbf",
+                            "on-tertiary": "#1c0b9f",
+                            "surface-dim": "#131315",
+                            "tertiary-fixed": "#e2dfff",
+                            "on-error": "#690005",
+                            "on-surface": "#e4e2e4",
+                            "primary-fixed": "#d8e2ff",
+                            "surface-container": "#1f1f21",
+                            "on-primary-container": "#00285c",
+                            "on-primary-fixed": "#001a41",
+                            "outline": "#8b90a0",
+                            "surface": "#131315",
+                            "tertiary-fixed-dim": "#c2c1ff",
+                            "inverse-surface": "#e4e2e4",
+                            "secondary": "#ffbc7c",
+                            "on-secondary-fixed": "#2d1600",
+                            "secondary-fixed-dim": "#ffb874",
+                            "primary-container": "#4b8eff",
+                            "on-surface-variant": "#c1c6d7",
+                            "surface-container-low": "#1b1b1d",
+                            "inverse-on-surface": "#303032",
+                            "error": "#ffb4ab",
+                            "on-background": "#e4e2e4",
+                            "on-primary": "#002e69",
+                            "surface-bright": "#39393b",
+                            "on-secondary-fixed-variant": "#6a3b00",
+                            "outline-variant": "#414755",
+                            "error-container": "#93000a",
+                            "background": "#131315",
+                            "surface-container-lowest": "#0e0e10",
+                            "primary-fixed-dim": "#adc6ff",
+                            "tertiary-container": "#8382ff",
+                            "surface-container-high": "#2a2a2c",
+                            "on-tertiary-fixed": "#0c006a",
+                            "on-secondary": "#4b2800",
+                            "on-primary-fixed-variant": "#004493",
+                            "inverse-primary": "#005bc1",
+                            "surface-tint": "#adc6ff",
+                            "surface-container-highest": "#353437",
+                            "on-secondary-container": "#633700",
+                            "on-tertiary-fixed-variant": "#3631b4",
+                            "on-error-container": "#ffdad6",
+                            "tertiary": "#c2c1ff",
+                            "on-tertiary-container": "#150093"
+                    },
+                    "borderRadius": {
+                            "DEFAULT": "0.25rem",
+                            "lg": "0.5rem",
+                            "xl": "0.75rem",
+                            "full": "9999px"
+                    },
+                    "spacing": {
+                            "grid-gutter": "16px",
+                            "base": "8px",
+                            "container-padding": "20px",
+                            "stack-gap": "12px"
+                    },
+                    "fontFamily": {
+                            "label-caps": ["Inter"],
+                            "title-md": ["Inter"],
+                            "data-mono": ["Inter"],
+                            "display-temp": ["Inter"],
+                            "headline-lg": ["Inter"],
+                            "body-md": ["Inter"],
+                            "headline-lg-mobile": ["Inter"]
+                    },
+                    "fontSize": {
+                            "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.1em", "fontWeight": "700"}],
+                            "title-md": ["20px", {"lineHeight": "28px", "fontWeight": "500"}],
+                            "data-mono": ["14px", {"lineHeight": "20px", "fontWeight": "500"}],
+                            "display-temp": ["96px", {"lineHeight": "116px", "letterSpacing": "-0.04em", "fontWeight": "700"}],
+                            "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                            "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                            "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        /* Glassmorphism Utilities */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+        }
+        
+        /* Inner light edge simulation */
+        .glass-edge::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            border-radius: inherit;
+            padding: 1px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 40%, rgba(255,255,255,0) 100%);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+        }
+
+        /* Subtle Glow Animation for AI Card */
+        @keyframes subtle-pulse {
+            0% { box-shadow: 0 0 20px -5px rgba(173, 198, 255, 0.2); }
+            50% { box-shadow: 0 0 25px 2px rgba(173, 198, 255, 0.3); }
+            100% { box-shadow: 0 0 20px -5px rgba(173, 198, 255, 0.2); }
+        }
+        .ai-glow {
+            animation: subtle-pulse 4s infinite ease-in-out;
+        }
+
+        /* Hide scrollbar for horizontal scroll */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        /* Atmospheric Background Base */
+        body {
+            background-color: #131315; /* background color */
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(75, 142, 255, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 85% 30%, rgba(131, 130, 255, 0.05) 0%, transparent 50%);
+            background-attachment: fixed;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body-md antialiased min-h-screen pb-24 md:pb-0 pt-20">
+<!-- TopAppBar (From JSON) -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-container-padding h-16 bg-transparent backdrop-blur-xl bg-white/10 border-b border-white/20 transition-all duration-300 ease-in-out md:hidden"><h1 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface font-bold tracking-tight">Mumbai, IN</h1><div class="flex items-center gap-2"><a class="relative p-2 rounded-full hover:bg-white/5 cursor-pointer text-on-surface" href="{{DATA:SCREEN:SCREEN_8}}"><span class="material-symbols-outlined">notifications</span><span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full"></span></a><a class="w-8 h-8 rounded-full overflow-hidden border border-outline-variant hover:bg-white/5 cursor-pointer" href="{{DATA:SCREEN:SCREEN_7}}"><img class="w-full h-full object-cover" alt="User Profile" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDfi7enob37vc3rjRwvSDeeP2Z7E4OhByxB1BbtMJkLBVAMr4M2Ong87AND8msRZk86JQ6YigjQ6EwQwFUU3HSP5agR49c0MBpA6sJmtCZ4wur8yh0KiH-5FB_Eell6MGWWs36y0OuQyTblXv3AwaS5vUJjicDC4Vm3a4x8_17uEnx-rXBf2yWqm25yvRX0k8HI8RBKuEtrUZJG998ovdL6KjYu_KryAdtcTC_rLb49frgW4JajkV3-lA"></a></div></header>
+<!-- Web Top Nav (Desktop variation of TopAppBar to satisfy 'Responsive Pivot') -->
+<nav class="hidden md:flex fixed top-0 left-0 w-full z-50 justify-between items-center px-container-padding h-16 backdrop-blur-xl bg-white/10 border-b border-white/20 transition-all duration-300 ease-in-out"><h1 class="font-headline-lg text-headline-lg text-on-surface font-bold tracking-tight">Mumbai, IN</h1><div class="flex items-center gap-6"><a class="flex flex-col items-center justify-center text-primary hover:bg-white/5 px-4 py-2 rounded-lg transition-colors" href="{{DATA:SCREEN:SCREEN_9}}"><span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 1;">home_app_logo</span><span class="font-label-caps text-label-caps">Home</span></a><a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-white/5 px-4 py-2 rounded-lg transition-colors hover:text-primary" href="{{DATA:SCREEN:SCREEN_4}}"><span class="material-symbols-outlined mb-1">auto_awesome</span><span class="font-label-caps text-label-caps">Advisor</span></a><a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-white/5 px-4 py-2 rounded-lg transition-colors hover:text-primary" href="{{DATA:SCREEN:SCREEN_10}}"><span class="material-symbols-outlined mb-1">explore</span><span class="font-label-caps text-label-caps">Explore</span></a><a class="relative p-2 rounded-full hover:bg-white/5 cursor-pointer text-on-surface-variant hover:text-primary" href="{{DATA:SCREEN:SCREEN_8}}"><span class="material-symbols-outlined">notifications</span><span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full"></span></a><a class="w-8 h-8 rounded-full overflow-hidden border border-outline-variant hover:bg-white/5 cursor-pointer" href="{{DATA:SCREEN:SCREEN_7}}"><img class="w-full h-full object-cover" alt="User Profile" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDfi7enob37vc3rjRwvSDeeP2Z7E4OhByxB1BbtMJkLBVAMr4M2Ong87AND8msRZk86JQ6YigjQ6EwQwFUU3HSP5agR49c0MBpA6sJmtCZ4wur8yh0KiH-5FB_Eell6MGWWs36y0OuQyTblXv3AwaS5vUJjicDC4Vm3a4x8_17uEnx-rXBf2yWqm25yvRX0k8HI8RBKuEtrUZJG998ovdL6KjYu_KryAdtcTC_rLb49frgW4JajkV3-lA"></a></div></nav>
+<main class="max-w-7xl mx-auto px-container-padding w-full flex flex-col gap-grid-gutter md:mt-24">
+<!-- Active Alerts Section -->
+<section class="glass-panel glass-edge rounded-xl p-4 bg-error-container/20 border-error/30 cursor-pointer hover:bg-error-container/30 transition-colors" onclick="window.location.href='{{DATA:SCREEN:SCREEN_8}}'">
+<div class="flex items-start justify-between gap-4">
+<div class="flex gap-3">
+<div class="w-10 h-10 rounded-full bg-error/20 flex items-center justify-center flex-shrink-0">
+<span class="material-symbols-outlined text-error text-xl">warning</span>
+</div>
+<div>
+<h3 class="font-title-md text-title-md text-error font-semibold flex items-center gap-2">3 Active Alerts <span class="w-2 h-2 rounded-full bg-error animate-pulse"></span></h3>
+<p class="font-body-md text-body-md text-on-surface-variant mt-1">Heavy rainfall expected in next 2 hrs. High tide warning at 14:00.</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-error/70">chevron_right</span>
+</div>
+</section>
+<!-- Current Weather Hero -->
+<section class="glass-panel glass-edge rounded-xl p-6 flex flex-col md:flex-row items-center md:items-start justify-between relative overflow-hidden mt-2">
+<!-- Decorative background blur for depth -->
+<div class="absolute -top-20 -right-20 w-64 h-64 bg-primary/10 rounded-full blur-3xl pointer-events-none"></div>
+<div class="flex flex-col items-center md:items-start z-10">
+<div class="flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-primary text-3xl">partly_cloudy_day</span>
+<span class="font-title-md text-title-md text-on-surface-variant">Partly Cloudy</span>
+</div>
+<div class="font-display-temp text-display-temp text-on-surface">28°</div>
+<div class="flex gap-4 mt-2 font-data-mono text-data-mono text-on-surface-variant">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[16px]">water_drop</span> H: 72%</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[16px]">air</span> W: 12 km/h</span>
+</div>
+</div>
+<!-- Quick Action Chip -->
+<div class="mt-6 md:mt-0 z-10 flex flex-col justify-end">
+<div class="bg-secondary-container/20 border border-secondary-container/30 text-secondary-container px-4 py-2 rounded-full font-label-caps text-label-caps flex items-center gap-2 backdrop-blur-md">
+<span class="material-symbols-outlined text-[14px]">warning</span>
+                    Rain expected in 2 hrs
+                </div>
+</div>
+</section>
+<!-- Live Weather Map Section -->
+
+<!-- For You Section (Horizontal Scroll) -->
+<section class="flex flex-col gap-stack-gap">
+<h2 class="font-title-md text-title-md text-on-surface px-1">For You</h2>
+<div class="flex overflow-x-auto no-scrollbar gap-grid-gutter pb-4 -mx-container-padding px-container-padding snap-x snap-mandatory">
+<!-- Health Card -->
+<div class="glass-panel glass-edge rounded-xl p-4 min-w-[240px] flex-shrink-0 snap-start flex flex-col justify-between relative group cursor-pointer hover:bg-white/5 transition-colors" onclick="window.location.href='{{DATA:SCREEN:SCREEN_3}}'">
+<div class="flex justify-between items-start mb-6">
+<div class="flex items-center gap-2 text-tertiary">
+<span class="material-symbols-outlined">health_metrics</span>
+<span class="font-label-caps text-label-caps">HEALTH MODE</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant text-sm group-hover:text-primary transition-colors">arrow_forward</span>
+</div>
+<div>
+<div class="flex items-baseline gap-2">
+<span class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">42</span>
+<span class="font-data-mono text-data-mono text-primary">AQI</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant">Good air quality. Low pollen levels today.</p>
+</div>
+</div>
+<!-- Fitness Card with Progress Ring -->
+<div class="glass-panel glass-edge rounded-xl p-4 min-w-[280px] flex-shrink-0 snap-start flex flex-col justify-between relative group cursor-pointer hover:bg-white/5 transition-colors">
+<div class="flex justify-between items-start mb-4">
+<div class="flex items-center gap-2 text-secondary">
+<span class="material-symbols-outlined">fitness_center</span>
+<span class="font-label-caps text-label-caps">FITNESS MODE</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant text-sm group-hover:text-primary transition-colors">arrow_forward</span>
+</div>
+<div class="flex items-center justify-between">
+<div>
+<div class="font-title-md text-title-md text-on-surface mb-1">6:00 PM</div>
+<p class="font-data-mono text-data-mono text-on-surface-variant">Best Running Hour</p>
+</div>
+<!-- Simple CSS Progress Ring -->
+<div class="relative w-16 h-16">
+<svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+<!-- Background Track -->
+<path class="text-surface-variant" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3"></path>
+<!-- Foreground Track (Approx 75%) -->
+<path class="text-secondary" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-dasharray="75, 100" stroke-linecap="round" stroke-width="3"></path>
+</svg>
+<div class="absolute inset-0 flex items-center justify-center">
+<span class="material-symbols-outlined text-secondary text-lg">directions_run</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Beach Card -->
+<div class="glass-panel glass-edge rounded-xl p-4 min-w-[240px] flex-shrink-0 snap-start flex flex-col justify-between relative group cursor-pointer hover:bg-white/5 transition-colors overflow-hidden" onclick="window.location.href='{{DATA:SCREEN:SCREEN_6}}'">
+<!-- Subtle background image hint -->
+<div class="absolute inset-0 opacity-20 bg-cover bg-center mix-blend-overlay" data-alt="A dark, moody, highly blurred abstract background of ocean waves at dusk, using deep blue and teal tones to create a subtle texture for a weather card in a modern dark UI." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDylP5f6wYN6dVITNt6m0EdlGC4I-D8IeQfwcbHYQ3vcsDhZsRyng8btx9phjqvceOAmqjgL8Me5UeYkktPG1F66RJT0xB-z_BYou1sJluPRSjn-3ICzs0ZGZQlS6kHP0lxGV5ycMaPoiyIFAoznVFk4H8e12JPdpcMslI5tjjLty9lqzP3foTCS9nMxVzaGttjMcoTFE5ffHSWPQM_1lLjwNFHquvQmLtvQxzvkIEjGTB-QYIzaMd6LQ')"></div>
+<div class="flex justify-between items-start mb-6 relative z-10">
+<div class="flex items-center gap-2 text-primary-fixed">
+<span class="material-symbols-outlined">waves</span>
+<span class="font-label-caps text-label-caps">BEACH MODE</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant text-sm group-hover:text-primary transition-colors">arrow_forward</span>
+</div>
+<div class="relative z-10 flex justify-between">
+<div>
+<div class="flex items-baseline gap-1">
+<span class="font-title-md text-title-md text-on-surface">1.2m</span>
+</div>
+<p class="font-data-mono text-data-mono text-on-surface-variant">Wave Height</p>
+</div>
+<div>
+<div class="flex items-baseline gap-1">
+<span class="font-title-md text-title-md text-on-surface">26°</span>
+</div>
+<p class="font-data-mono text-data-mono text-on-surface-variant">Water</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Advisor AI Insight Card -->
+<section class="mt-4 mb-8">
+<div class="glass-panel glass-edge rounded-xl p-[1px] ai-glow bg-gradient-to-br from-primary/30 to-tertiary-container/30">
+<div class="bg-surface-container/90 rounded-xl p-5 h-full backdrop-blur-xl flex flex-col gap-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-gradient-to-tr from-primary to-tertiary-container flex items-center justify-center shadow-lg">
+<span class="material-symbols-outlined text-on-primary-fixed" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+</div>
+<span class="font-title-md text-title-md text-on-surface font-semibold">Advisor AI Persona Insights</span>
+</div>
+<div class="flex flex-col gap-3">
+<div class="flex items-start gap-3 bg-white/5 p-3 rounded-lg border border-white/5">
+<span class="material-symbols-outlined text-secondary mt-0.5">flight_takeoff</span>
+<div>
+<h4 class="font-data-mono text-data-mono text-on-surface mb-0.5">Travelers</h4>
+<p class="font-body-md text-body-md text-on-surface-variant text-sm">Carry a raincoat for your London trip. 30% flight delay risk due to crosswinds.</p>
+</div>
+</div>
+<div class="flex items-start gap-3 bg-white/5 p-3 rounded-lg border border-white/5">
+<span class="material-symbols-outlined text-primary mt-0.5">directions_car</span>
+<div>
+<h4 class="font-data-mono text-data-mono text-on-surface mb-0.5">Commuters</h4>
+<p class="font-body-md text-body-md text-on-surface-variant text-sm">Route clear. Good visibility. Minor road-flood risk near Andheri subway.</p>
+</div>
+</div>
+<div class="flex items-start gap-3 bg-white/5 p-3 rounded-lg border border-white/5">
+<span class="material-symbols-outlined text-tertiary mt-0.5">event</span>
+<div>
+<h4 class="font-data-mono text-data-mono text-on-surface mb-0.5">Event Planners</h4>
+<p class="font-body-md text-body-md text-on-surface-variant text-sm">Outdoor Comfort: 85/100. High confidence (92%) for clear skies this evening.</p>
+</div>
+</div>
+</div>
+<button class="self-start mt-2 bg-primary/10 hover:bg-primary/20 border border-primary/30 text-primary px-5 py-2.5 rounded-full font-label-caps text-label-caps flex items-center gap-2 transition-colors" onclick="window.location.href='{{DATA:SCREEN:SCREEN_5}}'">
+<span class="material-symbols-outlined text-sm">chat</span>
+                        ASK ADVISOR
+                    </button>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar (From JSON, mobile only) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-4 pt-2 bg-transparent backdrop-blur-2xl bg-white/10 border-t border-white/10 rounded-t-xl shadow-lg"><!-- Home (Active) -->
+<a class="flex flex-col items-center justify-center bg-primary-container/30 text-primary rounded-xl px-3 py-1 scale-95 transition-transform" href="{{DATA:SCREEN:SCREEN_9}}">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 1;">home_app_logo</span>
+<span class="font-label-caps text-label-caps">Home</span>
+</a>
+<!-- Advisor -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant/70 hover:text-primary transition-colors" href="{{DATA:SCREEN:SCREEN_4}}">
+<span class="material-symbols-outlined mb-1">auto_awesome</span>
+<span class="font-label-caps text-label-caps">Advisor</span>
+</a>
+<!-- Explore -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant/70 hover:text-primary transition-colors" href="{{DATA:SCREEN:SCREEN_10}}">
+<span class="material-symbols-outlined mb-1">explore</span>
+<span class="font-label-caps text-label-caps">Explore</span>
+</a></nav>
+
+
+
+
+</body></html>

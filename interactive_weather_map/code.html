@@ -1,0 +1,230 @@
+<!DOCTYPE html><html class="dark" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Mausam - Interactive Weather Map</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-error-container": "#ffdad6",
+                        "on-error": "#690005",
+                        "primary-fixed-dim": "#adc6ff",
+                        "primary-fixed": "#d8e2ff",
+                        "inverse-surface": "#e4e2e4",
+                        "secondary": "#ffbc7c",
+                        "surface-container-highest": "#353437",
+                        "surface-tint": "#adc6ff",
+                        "on-surface-variant": "#c1c6d7",
+                        "primary-container": "#4b8eff",
+                        "on-primary": "#002e69",
+                        "on-secondary-fixed-variant": "#6a3b00",
+                        "surface-bright": "#39393b",
+                        "surface-variant": "#353437",
+                        "on-surface": "#e4e2e4",
+                        "on-tertiary-fixed-variant": "#3631b4",
+                        "inverse-primary": "#005bc1",
+                        "error": "#ffb4ab",
+                        "tertiary-fixed-dim": "#c2c1ff",
+                        "tertiary-fixed": "#e2dfff",
+                        "on-primary-fixed-variant": "#004493",
+                        "background": "#131315",
+                        "surface-container": "#1f1f21",
+                        "inverse-on-surface": "#303032",
+                        "on-primary-container": "#00285c",
+                        "secondary-fixed-dim": "#ffb874",
+                        "secondary-container": "#fe9400",
+                        "on-tertiary-fixed": "#0c006a",
+                        "tertiary-container": "#8382ff",
+                        "surface": "#131315",
+                        "on-background": "#e4e2e4",
+                        "on-primary-fixed": "#001a41",
+                        "on-secondary-container": "#633700",
+                        "secondary-fixed": "#ffdcbf",
+                        "surface-container-high": "#2a2a2c",
+                        "surface-container-lowest": "#0e0e10",
+                        "on-tertiary": "#1c0b9f",
+                        "tertiary": "#c2c1ff",
+                        "primary": "#adc6ff",
+                        "on-secondary-fixed": "#2d1600",
+                        "outline": "#8b90a0",
+                        "error-container": "#93000a",
+                        "on-secondary": "#4b2800",
+                        "outline-variant": "#414755",
+                        "surface-container-low": "#1b1b1d",
+                        "surface-dim": "#131315",
+                        "on-tertiary-container": "#150093"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "grid-gutter": "16px",
+                        "container-padding": "20px",
+                        "stack-gap": "12px",
+                        "base": "8px"
+                    },
+                    "fontFamily": {
+                        "data-mono": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "label-caps": ["Inter"],
+                        "display-temp": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "body-md": ["Inter"],
+                        "title-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "data-mono": ["14px", { "lineHeight": "20px", "fontWeight": "500" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.1em", "fontWeight": "700" }],
+                        "display-temp": ["96px", { "lineHeight": "116px", "letterSpacing": "-0.04em", "fontWeight": "700" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "title-md": ["20px", { "lineHeight": "28px", "fontWeight": "500" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .glass-panel {
+            background: rgba(19, 19, 21, 0.4);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .glass-border-top {
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0) 100%);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface h-screen w-screen overflow-hidden font-body-md text-body-md antialiased selection:bg-primary-container selection:text-on-primary-container">
+<!-- Main Map Background -->
+<div class="absolute inset-0 w-full h-full z-0">
+<img alt="Interactive Weather Map" class="object-cover w-full h-full opacity-80 mix-blend-screen" src="https://lh3.googleusercontent.com/aida/AEtjO1WstF0iCoZ5S10SBv0Xxoe6lkP53tG0R9JtD4E2XAu1WQJPc-ogkMiPleRjDj9EnQ2HmFtEuuW6reEgMSx4gLUTUTD7JPWqEh2EO-gMsNxIhsNOar_qVEfQS-5b_a9qM8n7EGkCFSXn31rV27qsfJT1vRQmclQbiOlJ0m0TX7t3mvkXxl2lAiJ8RpjhIwnwQsex4kIcR706H5qOln7-1AKL83gOrDdSkqIKvjuaNf32bkbNLewe8m4z2x45">
+<!-- Overlay gradient for better text readability at top and bottom -->
+<div class="absolute inset-0 bg-gradient-to-b from-background/80 via-transparent to-background/90 pointer-events-none"></div>
+</div>
+<!-- Top App Bar (Map Search) -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-container-padding h-16 pt-safe-top mt-4">
+<div class="glass-panel w-full rounded-full flex items-center px-4 py-3 shadow-lg">
+<span class="material-symbols-outlined text-on-surface-variant mr-3" data-icon="search">search</span>
+<input class="bg-transparent border-none outline-none text-on-surface font-title-md text-title-md w-full placeholder-on-surface-variant/50 focus:ring-0 p-0" placeholder="Search location..." type="text" value="Mumbai, IN">
+<button class="ml-3 p-1 rounded-full hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined text-primary" data-icon="my_location" data-weight="fill" style="font-variation-settings: 'FILL' 1;">my_location</span>
+</button>
+</div>
+<a href="{{DATA:SCREEN:SCREEN_7}}" class="ml-3 shrink-0 w-10 h-10 rounded-full overflow-hidden border-2 border-primary/30 hover:opacity-80 transition-opacity active:scale-95"><img alt="User profile picture" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB4hI24TbcGiVV6n0fMqgDfsISByQKSNJbFQCCuKqOSgiHPHUuPksvkrajQwmgHnlBiVoZ1y7XmMWp7fttI0dWiOlb4dw0W2K7zRLdnFzOf7zSR5WPXhK7FwqzkauE2DaIsA9FttaRk_Q9nsYPrxF3jQFNxwwT5_qpuf8Gfj_Py0h64GRAgTInlT2_GVQFjWt-QR49a16HX1ZyKrO2TXrpSi7Pl5TNNZL30UjMIymT2Nyb7JLyTyBTa9g"></a></header>
+<!-- Map Layer Controls (Right Side) -->
+<div class="absolute right-container-padding top-1/2 -translate-y-1/2 z-40 flex flex-col gap-stack-gap">
+<div class="glass-panel rounded-full p-2 flex flex-col gap-2 shadow-lg">
+<button class="p-3 rounded-full bg-primary/20 text-primary transition-all hover:bg-primary/30 flex items-center justify-center group relative">
+<span class="material-symbols-outlined" data-icon="air" data-weight="fill" style="font-variation-settings: 'FILL' 1;">air</span>
+<span class="absolute right-full mr-2 glass-panel px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">Wind</span>
+</button>
+<button class="p-3 rounded-full text-on-surface-variant transition-all hover:bg-white/10 hover:text-on-surface flex items-center justify-center group relative">
+<span class="material-symbols-outlined" data-icon="rainy">rainy</span>
+<span class="absolute right-full mr-2 glass-panel px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">Rain</span>
+</button>
+<button class="p-3 rounded-full text-on-surface-variant transition-all hover:bg-white/10 hover:text-on-surface flex items-center justify-center group relative">
+<span class="material-symbols-outlined" data-icon="device_thermostat">device_thermostat</span>
+<span class="absolute right-full mr-2 glass-panel px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">Temperature</span>
+</button>
+<button class="p-3 rounded-full text-on-surface-variant transition-all hover:bg-white/10 hover:text-on-surface flex items-center justify-center group relative">
+<span class="material-symbols-outlined" data-icon="masks">masks</span>
+<span class="absolute right-full mr-2 glass-panel px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">AQI</span>
+</button>
+</div>
+<div class="glass-panel rounded-full p-2 mt-4 shadow-lg flex flex-col">
+<button class="p-3 rounded-full text-on-surface-variant transition-all hover:bg-white/10 hover:text-on-surface flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="layers">layers</span>
+</button>
+</div>
+</div>
+<!-- Bottom Info Panel -->
+<div class="absolute bottom-[80px] left-0 w-full px-container-padding z-40 pb-4">
+<div class="glass-panel rounded-xl p-4 glass-border-top shadow-2xl flex flex-col gap-4">
+<div class="flex justify-between items-start">
+<div>
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface mb-1">Mumbai, IN</h2>
+<div class="flex items-center gap-3 text-on-surface-variant font-data-mono text-data-mono">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]" data-icon="air">air</span>
+<span class="">15 km/h NE</span>
+</div>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]" data-icon="water_drop">water_drop</span>
+<span class="">78% Hum</span>
+</div>
+</div>
+</div>
+<div class="text-right">
+<span class="font-headline-lg text-headline-lg text-primary">28°</span>
+</div>
+</div>
+<!-- Timeline / Playback -->
+<div class="flex items-center gap-4 mt-2 pt-4 border-t border-white/10">
+<button class="w-10 h-10 rounded-full bg-primary text-on-primary flex items-center justify-center hover:bg-primary/90 transition-colors shrink-0 shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined" data-icon="play_arrow" data-weight="fill" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</button>
+<div class="flex-grow h-2 bg-surface-container-highest rounded-full overflow-hidden relative">
+<div class="absolute top-0 left-0 h-full bg-primary w-1/3 rounded-full"></div>
+<!-- Markers -->
+<div class="absolute top-0 left-1/4 w-[2px] h-full bg-background/50"></div>
+<div class="absolute top-0 left-2/4 w-[2px] h-full bg-background/50"></div>
+<div class="absolute top-0 left-3/4 w-[2px] h-full bg-background/50"></div>
+</div>
+<span class="font-data-mono text-data-mono text-on-surface-variant shrink-0">14:00</span>
+</div>
+</div>
+</div>
+<!-- Bottom Navigation Bar -->
+<nav aria-label="Bottom Navigation" class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-4 pt-2 bg-transparent backdrop-blur-2xl bg-white/10 border-t border-white/10 shadow-lg rounded-t-xl hidden md:hidden md:flex">
+<!-- Home (Inactive) -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant/70 hover:text-primary transition-all duration-300 ease-in-out group" href="#">
+<span class="material-symbols-outlined mb-1 group-hover:scale-110 transition-transform" data-icon="home_app_logo">home_app_logo</span>
+<span class="font-label-caps text-label-caps uppercase">Home</span>
+</a>
+<!-- Advisor (Inactive) -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant/70 hover:text-primary transition-all duration-300 ease-in-out group" href="#">
+<span class="material-symbols-outlined mb-1 group-hover:scale-110 transition-transform" data-icon="auto_awesome">auto_awesome</span>
+<span class="font-label-caps text-label-caps uppercase">Advisor</span>
+</a>
+<!-- Map (Active - Not in JSON, but inferred from prompt requirement for Map tab active. Replacing Alerts/Profile contextually based on "Map tab active" prompt mandate, though JSON lacks 'Map'. Adapting Alerts position) -->
+<a class="flex flex-col items-center justify-center bg-primary-container/30 text-primary rounded-xl px-3 py-1 scale-95 transition-transform duration-300 ease-in-out" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="map" data-weight="fill" style="font-variation-settings: 'FILL' 1;">map</span>
+<span class="font-label-caps text-label-caps uppercase">Map</span>
+</a>
+<!-- Profile (Inactive) -->
+
+</nav>
+<!-- Mobile specific bottom nav using exact JSON labels where possible but highlighting intent -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-4 pt-2 bg-transparent backdrop-blur-2xl bg-white/10 border-t border-white/10 shadow-lg rounded-t-xl">
+<a class="flex flex-col items-center justify-center text-on-surface-variant/70 hover:text-primary transition-transform" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="home_app_logo">home_app_logo</span>
+<span class="font-label-caps text-label-caps">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant/70 hover:text-primary transition-transform" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="auto_awesome">auto_awesome</span>
+<span class="font-label-caps text-label-caps">Advisor</span>
+</a>
+<!-- Semantic Active state for Map exploration context, overriding Alerts temporarily based on user prompt 'Map tab active' -->
+<a class="flex flex-col items-center justify-center bg-primary-container/30 text-primary rounded-xl px-3 py-1 Active: scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="explore" data-weight="fill" style="font-variation-settings: 'FILL' 1;">explore</span>
+<span class="font-label-caps text-label-caps">Explore</span>
+</a>
+
+</nav>
+
+
+
+</body></html>

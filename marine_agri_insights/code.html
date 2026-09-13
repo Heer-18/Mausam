@@ -1,0 +1,271 @@
+<!DOCTYPE html><html class="dark" lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Marine &amp; Agriculture - Mausam</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                            "surface-variant": "#353437",
+                            "secondary-container": "#fe9400",
+                            "primary": "#adc6ff",
+                            "secondary-fixed": "#ffdcbf",
+                            "on-tertiary": "#1c0b9f",
+                            "surface-dim": "#131315",
+                            "tertiary-fixed": "#e2dfff",
+                            "on-error": "#690005",
+                            "on-surface": "#e4e2e4",
+                            "primary-fixed": "#d8e2ff",
+                            "surface-container": "#1f1f21",
+                            "on-primary-container": "#00285c",
+                            "on-primary-fixed": "#001a41",
+                            "outline": "#8b90a0",
+                            "surface": "#131315",
+                            "tertiary-fixed-dim": "#c2c1ff",
+                            "inverse-surface": "#e4e2e4",
+                            "secondary": "#ffbc7c",
+                            "on-secondary-fixed": "#2d1600",
+                            "secondary-fixed-dim": "#ffb874",
+                            "primary-container": "#4b8eff",
+                            "on-surface-variant": "#c1c6d7",
+                            "surface-container-low": "#1b1b1d",
+                            "inverse-on-surface": "#303032",
+                            "error": "#ffb4ab",
+                            "on-background": "#e4e2e4",
+                            "on-primary": "#002e69",
+                            "surface-bright": "#39393b",
+                            "on-secondary-fixed-variant": "#6a3b00",
+                            "outline-variant": "#414755",
+                            "error-container": "#93000a",
+                            "background": "#131315",
+                            "surface-container-lowest": "#0e0e10",
+                            "primary-fixed-dim": "#adc6ff",
+                            "tertiary-container": "#8382ff",
+                            "surface-container-high": "#2a2a2c",
+                            "on-tertiary-fixed": "#0c006a",
+                            "on-secondary": "#4b2800",
+                            "on-primary-fixed-variant": "#004493",
+                            "inverse-primary": "#005bc1",
+                            "surface-tint": "#adc6ff",
+                            "surface-container-highest": "#353437",
+                            "on-secondary-container": "#633700",
+                            "on-tertiary-fixed-variant": "#3631b4",
+                            "on-error-container": "#ffdad6",
+                            "tertiary": "#c2c1ff",
+                            "on-tertiary-container": "#150093"
+                    },
+                    "borderRadius": {
+                            "DEFAULT": "0.25rem",
+                            "lg": "0.5rem",
+                            "xl": "0.75rem",
+                            "full": "9999px"
+                    },
+                    "spacing": {
+                            "grid-gutter": "16px",
+                            "base": "8px",
+                            "container-padding": "20px",
+                            "stack-gap": "12px"
+                    },
+                    "fontFamily": {
+                            "label-caps": ["Inter"],
+                            "title-md": ["Inter"],
+                            "data-mono": ["Inter"],
+                            "display-temp": ["Inter"],
+                            "headline-lg": ["Inter"],
+                            "body-md": ["Inter"],
+                            "headline-lg-mobile": ["Inter"]
+                    },
+                    "fontSize": {
+                            "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.1em", "fontWeight": "700"}],
+                            "title-md": ["20px", {"lineHeight": "28px", "fontWeight": "500"}],
+                            "data-mono": ["14px", {"lineHeight": "20px", "fontWeight": "500"}],
+                            "display-temp": ["96px", {"lineHeight": "116px", "letterSpacing": "-0.04em", "fontWeight": "700"}],
+                            "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                            "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                            "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { background-color: theme('colors.background'); color: theme('colors.on-background'); }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+            border-left: 1px solid rgba(255, 255, 255, 0.12);
+        }
+        .progress-ring-circle {
+            transition: stroke-dashoffset 0.5s ease-in-out;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+    </style>
+</head>
+<body class="antialiased min-h-screen relative overflow-x-hidden">
+<!-- Ambient Background -->
+<div class="fixed inset-0 z-0 pointer-events-none">
+<div class="absolute inset-0 bg-gradient-to-br from-surface-dim via-surface to-surface-container-low opacity-80"></div>
+<div class="absolute top-0 right-0 w-96 h-96 bg-primary-container/20 rounded-full blur-[120px] mix-blend-screen"></div>
+<div class="absolute bottom-0 left-0 w-[500px] h-[500px] bg-secondary-container/10 rounded-full blur-[150px] mix-blend-screen"></div>
+</div>
+<!-- Navigation Drawer (Desktop/Tablet) / Hidden on Mobile -->
+<aside class="hidden md:flex h-full w-80 rounded-r-xl backdrop-blur-md bg-surface-container/90 shadow-2xl fixed inset-y-0 left-0 z-[60] flex-col py-6">
+<div class="px-6 mb-8 flex items-center space-x-4">
+<img alt="User Portrait" class="w-12 h-12 rounded-full object-cover border border-outline/30" data-alt="A portrait of a male user in a modern setting, soft lighting, professional yet casual. Modern digital photography, high contrast, dark mode aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC0bQFJmwHlUa5e7j-O9Gcoja4z-o6UbQe13G1gFt6ho4LZqEJ-NtVyHlbXm4cFFoPUIvO8by2tWyu48265QEKwcang1YZrUq9tpxPQz6W7ixJueah3UBn8fezP-kzF5yDgYX6A3kb8pbU5783odpJtOHWOtnotbr9KvguIGC38BQVjcT7IAGMLWohG5iBD1OF-ViaqXZZ60-YnAX18SjV-UPltw8dTBUuDwnekhSFpl5oOJW4hKTqcOg">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-primary text-lg">Rohan Sharma</h2>
+<p class="font-body-md text-body-md text-on-surface-variant text-sm">Premium Member</p>
+<p class="font-label-caps text-label-caps text-on-surface-variant/70 text-xs mt-1">Mumbai, India</p>
+</div>
+</div>
+<nav class="flex-1 space-y-2 px-4">
+<a class="flex items-center space-x-3 px-4 py-3 rounded-full text-on-surface-variant mx-2 hover:bg-surface-variant transition-all" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">health_metrics</span>
+<span class="font-title-md text-title-md text-base">Health Mode</span>
+</a>
+<a class="flex items-center space-x-3 px-4 py-3 rounded-full text-on-surface-variant mx-2 hover:bg-surface-variant transition-all" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">fitness_center</span>
+<span class="font-title-md text-title-md text-base">Fitness Mode</span>
+</a>
+<!-- Active State Context: Marine & Agriculture (Agri maps to Agri Mode, Beach to Beach Mode. Assuming a combined view or toggled view, highlighting Beach here as primary for the first section) -->
+<a class="flex items-center space-x-3 px-4 py-3 rounded-full bg-secondary-container text-on-secondary-container font-bold mx-2 shadow-lg transition-all" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">waves</span>
+<span class="font-title-md text-title-md text-base">Beach Mode</span>
+</a>
+<a class="flex items-center space-x-3 px-4 py-3 rounded-full text-on-surface-variant mx-2 hover:bg-surface-variant transition-all" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">agriculture</span>
+<span class="font-title-md text-title-md text-base">Agri Mode</span>
+</a>
+</nav>
+</aside>
+<!-- Top App Bar (Mobile) -->
+<header class="md:hidden fixed top-0 left-0 w-full z-50 flex justify-between items-center px-container-padding h-16 backdrop-blur-xl bg-white/10 border-b border-white/20 transition-all duration-300 ease-in-out">
+<a class="text-primary hover:bg-white/5 p-2 rounded-full flex items-center justify-center" href="{{DATA:SCREEN:SCREEN_9}}"><span class="material-symbols-outlined">arrow_back</span></a>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface font-extrabold tracking-tight"><a href="{{DATA:SCREEN:SCREEN_9}}" class="">Mumbai, IN</a></h1>
+<div class="flex items-center gap-2">
+<a class="text-on-surface-variant hover:text-primary p-2 rounded-full flex items-center justify-center transition-colors" href="{{DATA:SCREEN:SCREEN_8}}"><span class="material-symbols-outlined">notifications</span></a>
+<a class="text-primary hover:bg-white/5 rounded-full overflow-hidden w-8 h-8 flex items-center justify-center" href="{{DATA:SCREEN:SCREEN_7}}"><img alt="User profile picture" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAiw5UT6S1wLbJz5-FcTI3qjA13BAJHZWoE4H16zwGd3bA8cfnCQNiRhC-VJE-tRFpB8YaLBDM0QkUl2pve2XpNzKSPBd09qOTg8s_aVVd6xIc0fy8RrGbwS0YhRWWtU-9UfplIY6F_NIYQJvAkEyDuy47z0KIM75ANPF_Q4k_Px-WAbjpfBcoRasLxbqF24FdnfhGlwASr5wsKRyi9F6OYFkxN62QXWkKzKtIQXrdQSh-7_mjmqNFlGg"></a>
+</div>
+</header>
+<!-- Main Canvas -->
+<main class="relative z-10 pt-20 pb-24 md:pt-12 md:pb-12 px-container-padding md:ml-80 max-w-7xl mx-auto flex flex-col gap-stack-gap md:gap-grid-gutter">
+<!-- Header Title for Main Canvas -->
+<div class="mb-4">
+<h2 class="font-headline-lg-mobile md:font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface">Marine &amp; Agriculture Insights</h2>
+<p class="font-body-md text-body-md text-on-surface-variant mt-1">Real-time environmental data for coastal and inland activities.</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-12 gap-stack-gap md:gap-grid-gutter">
+<!-- Beach & Surf Section (Bento Box style) -->
+<section class="col-span-1 md:col-span-6 flex flex-col gap-stack-gap md:gap-grid-gutter">
+<div class="glass-card rounded-xl p-4 flex flex-col h-full">
+<div class="flex justify-between items-start mb-4">
+<div class="flex items-center gap-2 text-primary">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">surfing</span>
+<h3 class="font-title-md text-title-md text-on-surface">Beach &amp; Surf</h3>
+</div>
+<span class="bg-primary-container/20 text-primary-fixed border border-primary/30 px-2 py-1 rounded-full font-label-caps text-label-caps text-[10px]">COASTAL</span>
+</div>
+<div class="grid grid-cols-2 gap-4 mt-auto">
+<!-- Wave Height -->
+<div class="bg-surface-container-high/50 rounded-lg p-4 flex flex-col justify-between">
+<span class="material-symbols-outlined text-primary mb-2 opacity-80" style="font-variation-settings: 'FILL' 0;">waves</span>
+<p class="font-label-caps text-label-caps text-on-surface-variant">WAVE HEIGHT</p>
+<p class="font-headline-lg text-headline-lg text-on-surface mt-1">1.5<span class="text-lg text-on-surface-variant ml-1">m</span></p>
+</div>
+<!-- Wind Direction -->
+<div class="bg-surface-container-high/50 rounded-lg p-4 flex flex-col justify-between">
+<span class="material-symbols-outlined text-tertiary-fixed mb-2 opacity-80" style="font-variation-settings: 'FILL' 0;">air</span>
+<p class="font-label-caps text-label-caps text-on-surface-variant">WIND DIR.</p>
+<div class="flex items-center gap-2 mt-1">
+<span class="material-symbols-outlined text-on-surface" style="transform: rotate(45deg);">navigation</span>
+<p class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">NE</p>
+</div>
+</div>
+</div>
+<!-- Tide Graph Placeholder (Simplified visualization) -->
+<div class="mt-4 bg-surface-container-high/30 rounded-lg p-4 flex flex-col gap-2 relative overflow-hidden">
+<p class="font-label-caps text-label-caps text-on-surface-variant">TIDE CYCLE</p>
+<div class="h-16 w-full flex items-end justify-between relative">
+<!-- Abstract sine wave representation using CSS -->
+<div class="absolute inset-0 border-b border-outline-variant opacity-50 top-1/2"></div>
+<div class="w-1/6 h-full bg-gradient-to-t from-primary/20 to-primary/5 rounded-t-sm" style="height: 30%"></div>
+<div class="w-1/6 h-full bg-gradient-to-t from-primary/40 to-primary/10 rounded-t-sm" style="height: 60%"></div>
+<div class="w-1/6 h-full bg-gradient-to-t from-primary/60 to-primary/20 rounded-t-sm relative" style="height: 90%">
+<div class="absolute -top-2 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_rgba(173,198,255,0.8)]"></div>
+</div>
+<div class="w-1/6 h-full bg-gradient-to-t from-primary/40 to-primary/10 rounded-t-sm" style="height: 50%"></div>
+<div class="w-1/6 h-full bg-gradient-to-t from-primary/20 to-primary/5 rounded-t-sm" style="height: 20%"></div>
+</div>
+<div class="flex justify-between font-data-mono text-data-mono text-on-surface-variant text-xs mt-1">
+<span class="">06:00</span>
+<span class="text-primary font-bold">14:30 (High)</span>
+<span class="">22:00</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Agriculture Section -->
+<section class="col-span-1 md:col-span-6 flex flex-col gap-stack-gap md:gap-grid-gutter">
+<div class="glass-card rounded-xl p-4 flex flex-col h-full border-secondary/20 border-l-secondary/30">
+<div class="flex justify-between items-start mb-4">
+<div class="flex items-center gap-2 text-secondary-container">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">compost</span>
+<h3 class="font-title-md text-title-md text-on-surface">Agriculture</h3>
+</div>
+<span class="bg-secondary-container/20 text-secondary-fixed border border-secondary/30 px-2 py-1 rounded-full font-label-caps text-label-caps text-[10px]">INLAND</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<!-- Soil Moisture (Progress Ring) -->
+<div class="bg-surface-container-high/50 rounded-lg p-4 flex items-center justify-between">
+<div>
+<p class="font-label-caps text-label-caps text-on-surface-variant">SOIL MOISTURE</p>
+<p class="font-headline-lg text-headline-lg text-on-surface mt-1">68<span class="text-lg text-on-surface-variant">%</span></p>
+</div>
+<div class="relative w-16 h-16">
+<svg class="w-16 h-16" viewBox="0 0 100 100">
+<circle class="text-surface-variant stroke-current" cx="50" cy="50" fill="transparent" r="40" stroke-width="8"></circle>
+<circle class="text-secondary-container stroke-current progress-ring-circle" cx="50" cy="50" fill="transparent" r="40" stroke-dasharray="251.2" stroke-dashoffset="80.38" stroke-linecap="round" stroke-width="8"></circle>
+</svg>
+<span class="material-symbols-outlined absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-secondary-container text-sm" style="font-variation-settings: 'FILL' 1;">water_drop</span>
+</div>
+</div>
+<!-- Rainfall Prediction -->
+<div class="bg-surface-container-high/50 rounded-lg p-4 flex flex-col justify-center relative overflow-hidden">
+<span class="material-symbols-outlined text-primary mb-1 opacity-50 absolute top-2 right-2 text-4xl" style="font-variation-settings: 'FILL' 1;">rainy</span>
+<p class="font-label-caps text-label-caps text-on-surface-variant relative z-10">7-DAY RAINFALL</p>
+<p class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface mt-1 relative z-10">45<span class="text-sm text-on-surface-variant ml-1">mm predicted</span></p>
+</div>
+</div>
+<!-- Seasonal Planting Tip -->
+<div class="mt-4 bg-secondary-container/10 border border-secondary/20 rounded-lg p-4 flex gap-3">
+<div class="w-10 h-10 rounded-full bg-secondary-container/20 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-secondary-fixed" style="font-variation-settings: 'FILL' 1;">emoji_nature</span>
+</div>
+<div>
+<p class="font-label-caps text-label-caps text-secondary-fixed mb-1">SEASONAL TIP</p>
+<p class="font-body-md text-body-md text-on-surface">Ideal time for sowing tomato seeds. Soil temperatures are optimal.</p>
+</div>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- Bottom Nav Bar (Mobile) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-4 pt-2 backdrop-blur-2xl bg-white/10 border-t border-white/10 shadow-lg rounded-t-xl transition-all duration-300 ease-in-out"><a class="flex flex-col items-center justify-center text-on-surface-variant/70 hover:text-primary transition-all group" href="{{DATA:SCREEN:SCREEN_9}}"><span class="material-symbols-outlined group-hover:scale-110 transition-transform">home_app_logo</span><span class="font-label-caps text-label-caps mt-1 text-[10px]">Home</span></a><a class="flex flex-col items-center justify-center text-on-surface-variant/70 hover:text-primary transition-all group" href="{{DATA:SCREEN:SCREEN_4}}"><span class="material-symbols-outlined group-hover:scale-110 transition-transform">auto_awesome</span><span class="font-label-caps text-label-caps mt-1 text-[10px]">Advisor</span></a><a class="flex flex-col items-center justify-center text-on-surface-variant/70 hover:text-primary transition-all group" href="{{DATA:SCREEN:SCREEN_10}}"><span class="material-symbols-outlined group-hover:scale-110 transition-transform">explore</span><span class="font-label-caps text-label-caps mt-1 text-[10px]">Explore</span></a></nav>
+
+
+
+
+
+
+</body></html>
