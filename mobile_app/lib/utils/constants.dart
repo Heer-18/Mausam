@@ -2,8 +2,8 @@ class AppConstants {
   static const String appName = 'Mausam';
   static const String appTagline = 'Personalized Weather & Lifestyle Intelligence';
   
-  // Gemini API Key Default Fallback
-  static const String defaultGeminiApiKey = 'AQ.Ab8RN6KmcNHPN6aiZjPJ9a9-_TC3h-bkfsNSdWj-egAoyfE9GQ';
+  // Gemini API Key Default Fallback (loaded securely via .env or settings)
+  static const String defaultGeminiApiKey = '';
 
   // Default fallback if GPS is denied and no prior location chosen
   static const double fallbackLat = 28.6139; // New Delhi
