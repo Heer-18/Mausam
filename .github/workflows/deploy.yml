@@ -50,10 +50,15 @@ jobs:
 
       - name: Build Web Release
         working-directory: ./mobile_app
-        run: flutter build web --base-href "/Mausam/" --release
+        run: |
+          flutter build web --base-href "/Mausam/" --release
+          touch build/web/.nojekyll
+          cp build/web/index.html build/web/404.html
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
+        with:
+          enablement: true
 
       - name: Upload Artifact
         uses: actions/upload-pages-artifact@v3
@@ -63,3 +68,4 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
