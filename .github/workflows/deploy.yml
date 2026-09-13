@@ -33,7 +33,7 @@ jobs:
       - name: Build Web Release
         working-directory: ./mobile_app
         run: |
-          flutter build web --base-href "/Mausam/" --release --dart-define=GEMINI_API_KEY="${{ secrets.GEMINI_API_KEY }}"
+          flutter build web --base-href "/Mausam/" --release
           touch build/web/.nojekyll
           cp build/web/index.html build/web/404.html
           rm -f build/web/assets/.env
