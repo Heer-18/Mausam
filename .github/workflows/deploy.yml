@@ -26,6 +26,10 @@ jobs:
           channel: 'stable'
           cache: true
 
+      - name: Prepare Assets Placeholder
+        working-directory: ./mobile_app
+        run: cp .env.example .env
+
       - name: Install Dependencies
         working-directory: ./mobile_app
         run: flutter pub get
