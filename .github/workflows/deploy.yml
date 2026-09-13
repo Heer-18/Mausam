@@ -26,19 +26,6 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Prepare Environment Config
-        working-directory: ./mobile_app
-        run: |
-          if [ -n "${{ secrets.GEMINI_API_KEY }}" ]; then
-            echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" > .env
-            echo "API_BASE_URL=http://127.0.0.1:8000" >> .env
-          elif [ -f .env.example ]; then
-            cp .env.example .env
-          else
-            echo "GEMINI_API_KEY=" > .env
-            echo "API_BASE_URL=http://127.0.0.1:8000" >> .env
-          fi
-
       - name: Install Dependencies
         working-directory: ./mobile_app
         run: flutter pub get
@@ -46,9 +33,10 @@ jobs:
       - name: Build Web Release
         working-directory: ./mobile_app
         run: |
-          flutter build web --base-href "/Mausam/" --release
+          flutter build web --base-href "/Mausam/" --release --dart-define=GEMINI_API_KEY="${{ secrets.GEMINI_API_KEY }}"
           touch build/web/.nojekyll
           cp build/web/index.html build/web/404.html
+          rm -f build/web/assets/.env
 
       - name: Deploy to gh-pages Branch
         uses: peaceiris/actions-gh-pages@v4

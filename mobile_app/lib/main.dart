@@ -9,12 +9,13 @@ import 'utils/theme.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Load environment variables (.env) before running the app
+  // Load environment variables (.env / .env.example) before running the app
   try {
     await dotenv.load(fileName: ".env");
-    debugPrint("[main] .env loaded successfully. GEMINI_API_KEY present: ${dotenv.env['GEMINI_API_KEY'] != null && dotenv.env['GEMINI_API_KEY']!.isNotEmpty}");
-  } catch (e) {
-    debugPrint("[main] Warning: Could not load .env file: $e");
+  } catch (_) {
+    try {
+      await dotenv.load(fileName: ".env.example");
+    } catch (_) {}
   }
 
   runApp(const MausamApp());

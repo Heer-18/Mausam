@@ -31,7 +31,13 @@ class GeminiService {
       return envKey.trim();
     }
 
-    // 3. Fallback constant
+    // 3. Compile-time --dart-define parameter
+    const dartDefineKey = String.fromEnvironment('GEMINI_API_KEY');
+    if (dartDefineKey.isNotEmpty) {
+      return dartDefineKey;
+    }
+
+    // 4. Fallback constant
     return AppConstants.defaultGeminiApiKey;
   }
 
