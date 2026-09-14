@@ -5,6 +5,9 @@ class AppConstants {
   // Gemini API Key Default Fallback (loaded securely via .env or settings)
   static const String defaultGeminiApiKey = '';
 
+  // OpenWeather API Key Default Fallback (loaded securely via .env or settings)
+  static const String defaultOpenWeatherApiKey = '';
+
   // Default fallback if GPS is denied and no prior location chosen
   static const double fallbackLat = 28.6139; // New Delhi
   static const double fallbackLon = 77.2090;
