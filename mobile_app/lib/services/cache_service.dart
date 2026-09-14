@@ -8,6 +8,8 @@ class CacheService {
   static const String keySavedCity = 'mausam_saved_city';
   static const String keySavedPersona = 'mausam_saved_persona';
   static const String keyChatHistory = 'mausam_chat_history';
+  static const String keyChatSessions = 'mausam_chat_sessions_v1';
+  static const String keyActiveSessionId = 'mausam_active_session_id';
 
   static const int cacheValidityMinutes = 15;
 
@@ -99,13 +101,13 @@ class CacheService {
     return prefs.getString(keySavedPersona);
   }
 
-  /// Save Chat History
+  /// Save Chat History (Legacy single session fallback)
   static Future<void> saveChatHistory(List<Map<String, dynamic>> messages) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(keyChatHistory, jsonEncode(messages));
   }
 
-  /// Load Chat History
+  /// Load Chat History (Legacy single session fallback)
   static Future<List<Map<String, dynamic>>> loadChatHistory() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -115,6 +117,45 @@ class CacheService {
       return list.map((e) => Map<String, dynamic>.from(e)).toList();
     } catch (e) {
       return [];
+    }
+  }
+
+  /// Save All Multi-Session Chat Threads
+  static Future<void> saveAllChatSessions(List<Map<String, dynamic>> sessions) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(keyChatSessions, jsonEncode(sessions));
+    } catch (_) {}
+  }
+
+  /// Load All Multi-Session Chat Threads
+  static Future<List<Map<String, dynamic>>> loadAllChatSessions() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final str = prefs.getString(keyChatSessions);
+      if (str == null) return [];
+      final List<dynamic> list = jsonDecode(str);
+      return list.map((e) => Map<String, dynamic>.from(e)).toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// Save Active Session ID
+  static Future<void> saveActiveSessionId(String sessionId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(keyActiveSessionId, sessionId);
+    } catch (_) {}
+  }
+
+  /// Load Active Session ID
+  static Future<String?> loadActiveSessionId() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString(keyActiveSessionId);
+    } catch (_) {
+      return null;
     }
   }
 }

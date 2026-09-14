@@ -22,52 +22,70 @@ class MiniMetricsGrid extends StatelessWidget {
         : (airQuality.aqi <= 100 ? 'Moderate' : 'Unhealthy');
     final uvLabel = WeatherMath.getUvIndexLabel(telemetry.uvIndex);
 
-    return GridView.count(
-      crossAxisCount: 2,
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      childAspectRatio: 1.85,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        // 1. AQI Card
-        _buildMiniCard(
-          title: 'AIR QUALITY',
-          value: '${airQuality.aqi}',
-          subtitle: aqiStatus,
-          icon: Icons.eco_rounded,
-          iconColor: airQuality.aqi <= 50 ? AppColors.agriEmerald : AppColors.warningAmber,
-          progressPercentage: (airQuality.aqi / 200.0).clamp(0.0, 1.0),
+        Row(
+          children: [
+            // 1. AQI Card
+            Expanded(
+              child: _buildMiniCard(
+                title: 'AIR QUALITY',
+                value: '${airQuality.aqi}',
+                subtitle: aqiStatus,
+                icon: Icons.eco_rounded,
+                iconColor: airQuality.aqi <= 50
+                    ? AppColors.agriEmerald
+                    : AppColors.warningAmber,
+                progressPercentage: (airQuality.aqi / 200.0).clamp(0.0, 1.0),
+              ),
+            ),
+            const SizedBox(width: 12),
+            // 2. UV Index Card
+            Expanded(
+              child: _buildMiniCard(
+                title: 'UV INDEX',
+                value: '${telemetry.uvIndex.round()}',
+                subtitle: uvLabel,
+                icon: Icons.wb_sunny_rounded,
+                iconColor: telemetry.uvIndex >= 6
+                    ? AppColors.warningAmber
+                    : AppColors.electricCyan,
+                progressPercentage: (telemetry.uvIndex / 12.0).clamp(0.0, 1.0),
+              ),
+            ),
+          ],
         ),
-
-        // 2. UV Index Card
-        _buildMiniCard(
-          title: 'UV INDEX',
-          value: '${telemetry.uvIndex.round()}',
-          subtitle: uvLabel,
-          icon: Icons.wb_sunny_rounded,
-          iconColor: telemetry.uvIndex >= 6 ? AppColors.warningAmber : AppColors.electricCyan,
-          progressPercentage: (telemetry.uvIndex / 12.0).clamp(0.0, 1.0),
-        ),
-
-        // 3. Humidity Card
-        _buildMiniCard(
-          title: 'HUMIDITY',
-          value: '${telemetry.humidity}%',
-          subtitle: telemetry.humidity > 70 ? 'High Moisture' : 'Comfortable',
-          icon: Icons.water_drop_rounded,
-          iconColor: AppColors.electricCyan,
-          progressPercentage: telemetry.humidity / 100.0,
-        ),
-
-        // 4. Wind Card
-        _buildMiniCard(
-          title: 'WIND',
-          value: '${telemetry.windSpeed.round()} km/h',
-          subtitle: '${telemetry.windDirectionCardinal} (Gusts ${telemetry.windGusts.round()})',
-          icon: Icons.air_rounded,
-          iconColor: AppColors.primary,
-          progressPercentage: (telemetry.windSpeed / 40.0).clamp(0.0, 1.0),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            // 3. Humidity Card
+            Expanded(
+              child: _buildMiniCard(
+                title: 'HUMIDITY',
+                value: '${telemetry.humidity}%',
+                subtitle:
+                    telemetry.humidity > 70 ? 'High Moisture' : 'Comfortable',
+                icon: Icons.water_drop_rounded,
+                iconColor: AppColors.electricCyan,
+                progressPercentage: telemetry.humidity / 100.0,
+              ),
+            ),
+            const SizedBox(width: 12),
+            // 4. Wind Card
+            Expanded(
+              child: _buildMiniCard(
+                title: 'WIND',
+                value: '${telemetry.windSpeed.round()} km/h',
+                subtitle:
+                    '${telemetry.windDirectionCardinal} (Gusts ${telemetry.windGusts.round()})',
+                icon: Icons.air_rounded,
+                iconColor: AppColors.primary,
+                progressPercentage:
+                    (telemetry.windSpeed / 40.0).clamp(0.0, 1.0),
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -129,14 +147,22 @@ class MiniMetricsGrid extends StatelessWidget {
             ],
           ),
 
-          // Mini progress line indicator
+          // Mini animated progress line indicator
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: progressPercentage,
-              backgroundColor: Colors.white.withOpacity(0.06),
-              valueColor: AlwaysStoppedAnimation<Color>(iconColor.withOpacity(0.8)),
-              minHeight: 3.5,
+            child: TweenAnimationBuilder<double>(
+              tween: Tween<double>(begin: 0.0, end: progressPercentage),
+              duration: const Duration(milliseconds: 700),
+              curve: Curves.easeOutCubic,
+              builder: (context, val, child) {
+                return LinearProgressIndicator(
+                  value: val,
+                  backgroundColor: Colors.white.withOpacity(0.06),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                      iconColor.withOpacity(0.85)),
+                  minHeight: 3.5,
+                );
+              },
             ),
           ),
         ],

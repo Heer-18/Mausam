@@ -1,3 +1,5 @@
+import 'chat_attachment.dart';
+
 class ChatMessage {
   final String id;
   final String text;
@@ -5,6 +7,7 @@ class ChatMessage {
   final DateTime timestamp;
   final String? persona;
   final List<String> actionItems;
+  final List<ChatAttachment> attachments;
 
   ChatMessage({
     required this.id,
@@ -13,6 +16,7 @@ class ChatMessage {
     required this.timestamp,
     this.persona,
     this.actionItems = const [],
+    this.attachments = const [],
   });
 
   Map<String, dynamic> toJson() => {
@@ -22,6 +26,7 @@ class ChatMessage {
     'timestamp': timestamp.toIso8601String(),
     'persona': persona,
     'actionItems': actionItems,
+    'attachments': attachments.map((a) => a.toJson()).toList(),
   };
 
   factory ChatMessage.fromJson(Map<String, dynamic> json) => ChatMessage(
@@ -34,6 +39,10 @@ class ChatMessage {
     persona: json['persona'],
     actionItems: (json['actionItems'] as List<dynamic>?)
             ?.map((e) => e.toString())
+            .toList() ??
+        [],
+    attachments: (json['attachments'] as List<dynamic>?)
+            ?.map((a) => ChatAttachment.fromJson(a as Map<String, dynamic>))
             .toList() ??
         [],
   );

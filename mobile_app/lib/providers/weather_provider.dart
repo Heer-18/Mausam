@@ -3,15 +3,20 @@ import 'package:geolocator/geolocator.dart';
 import '../models/persona_type.dart';
 import '../models/weather_models.dart';
 import '../models/chat_message.dart';
+import '../models/chat_attachment.dart';
+import '../models/chat_session.dart';
 import '../services/weather_api_service.dart';
 import '../services/gemini_service.dart';
 import '../services/location_service.dart';
 import '../services/cache_service.dart';
+import '../services/notification_service.dart';
 import '../utils/constants.dart';
 import '../utils/weather_math.dart';
 
 class WeatherProvider extends ChangeNotifier {
   final WeatherApiService _apiService = WeatherApiService();
+  final NotificationService _notificationService = NotificationService();
+  bool _notificationsEnabled = true;
 
   // Location State
   double _currentLat = AppConstants.fallbackLat;
@@ -43,8 +48,9 @@ class WeatherProvider extends ChangeNotifier {
   int _commuteHazard = 15;
   String _commuteCondition = 'Clear Route — Normal Commute';
 
-  // Chat State
-  final List<ChatMessage> _chatMessages = [];
+  // Chat Multi-Session State
+  final List<ChatSession> _chatSessions = [];
+  String _activeSessionId = '';
   bool _isChatLoading = false;
 
   // Map Interactive State
@@ -85,7 +91,25 @@ class WeatherProvider extends ChangeNotifier {
   int get commuteHazard => _commuteHazard;
   String get commuteCondition => _commuteCondition;
 
-  List<ChatMessage> get chatMessages => _chatMessages;
+  List<ChatSession> get chatSessions => List.unmodifiable(_chatSessions);
+  String get activeSessionId => _activeSessionId;
+  ChatSession get activeSession {
+    if (_chatSessions.isEmpty) {
+      final defaultSession = _createDefaultChatSession();
+      _chatSessions.add(defaultSession);
+      _activeSessionId = defaultSession.id;
+      return defaultSession;
+    }
+    return _chatSessions.firstWhere(
+      (s) => s.id == _activeSessionId,
+      orElse: () {
+        _activeSessionId = _chatSessions.first.id;
+        return _chatSessions.first;
+      },
+    );
+  }
+
+  List<ChatMessage> get chatMessages => activeSession.messages;
   bool get isChatLoading => _isChatLoading;
 
   double get mapLat => _mapLat;
@@ -97,6 +121,46 @@ class WeatherProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get isRefreshing => _isRefreshing;
   String? get errorMessage => _errorMessage;
+  bool get notificationsEnabled => _notificationsEnabled;
+
+  /// Trigger a live test Weather Alert notification into the status bar
+  Future<void> sendTestAlertNotification() async {
+    final title = '🚨 Severe Weather Alert: $_cityName';
+    final desc = _alerts.isNotEmpty
+        ? _alerts.first.description
+        : 'High wind gusts (>48 km/h) & heavy rain expected in your zone. Secure outdoor items and drive cautiously.';
+    await _notificationService.showWeatherAlert(
+      id: 101,
+      title: title,
+      body: desc,
+      payload: 'alert_tap',
+    );
+  }
+
+  /// Trigger a live test Smart AI Persona Suggestion notification into the status bar
+  Future<void> sendTestSuggestionNotification() async {
+    final title = '💡 ${_activePersona.displayName} Smart Advisory';
+    final desc = _advisorySummary.isNotEmpty
+        ? _advisorySummary
+        : _actionBullet.isNotEmpty
+            ? _actionBullet
+            : 'Optimal weather window for $_cityName today with clean air and mild temperatures.';
+    await _notificationService.showPersonaSuggestion(
+      id: 202,
+      title: title,
+      body: desc,
+      payload: 'suggestion_tap',
+    );
+  }
+
+  /// Toggle notification permissions
+  Future<void> toggleNotifications(bool enabled) async {
+    _notificationsEnabled = enabled;
+    if (enabled) {
+      await _notificationService.requestPermissions();
+    }
+    notifyListeners();
+  }
 
   /// Initialize Application State
   Future<void> initializeApp() async {
@@ -114,15 +178,53 @@ class WeatherProvider extends ChangeNotifier {
       }
     }
 
-    // 2. Load saved chat history
-    final cachedChats = await CacheService.loadChatHistory();
-    if (cachedChats.isNotEmpty) {
-      _chatMessages.clear();
-      for (var m in cachedChats) {
-        _chatMessages.add(ChatMessage.fromJson(m));
+    // 2. Load saved multi-session chat threads
+    final cachedSessions = await CacheService.loadAllChatSessions();
+    if (cachedSessions.isNotEmpty) {
+      _chatSessions.clear();
+      for (var s in cachedSessions) {
+        final session = ChatSession.fromJson(s);
+        // Automatically sanitize and polish legacy raw lowercase snippet titles
+        if (session.title.toLowerCase().startsWith('how are') ||
+            session.title.toLowerCase() == 'hello' ||
+            session.title.endsWith('...') ||
+            session.title == session.title.toLowerCase()) {
+          final firstUserMsg = session.messages.where((m) => m.isUser).firstOrNull;
+          if (firstUserMsg != null) {
+            session.title = _deriveSessionTitle(firstUserMsg.text, firstUserMsg.attachments);
+          } else {
+            session.title = _toTitleCase(session.title.replaceAll('...', ''));
+          }
+        }
+        _chatSessions.add(session);
+      }
+      final savedActiveId = await CacheService.loadActiveSessionId();
+      if (savedActiveId != null && _chatSessions.any((s) => s.id == savedActiveId)) {
+        _activeSessionId = savedActiveId;
+      } else {
+        _activeSessionId = _chatSessions.first.id;
       }
     } else {
-      _initDefaultChatGreeting();
+      // Legacy single-session migration or initial greeting
+      final cachedChats = await CacheService.loadChatHistory();
+      if (cachedChats.isNotEmpty) {
+        final legacyMessages = cachedChats.map((m) => ChatMessage.fromJson(m)).toList();
+        final migratedSession = ChatSession(
+          id: 'session_${DateTime.now().millisecondsSinceEpoch}',
+          title: 'Recent Advisory',
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+          persona: _activePersona.shortTitle,
+          messages: legacyMessages,
+        );
+        _chatSessions.add(migratedSession);
+        _activeSessionId = migratedSession.id;
+      } else {
+        final defaultSession = _createDefaultChatSession();
+        _chatSessions.add(defaultSession);
+        _activeSessionId = defaultSession.id;
+      }
+      await _persistChatSessions();
     }
 
     // 3. Resolve Location
@@ -167,18 +269,132 @@ class WeatherProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _initDefaultChatGreeting() {
-    _chatMessages.clear();
-    _chatMessages.add(
-      ChatMessage(
-        id: 'msg_welcome_1',
-        text: "Hi there! I'm your Mausam AdvisorAI. Ask me anything about local weather, running conditions, UV & skin safety, crop moisture, or commute alerts!",
-        isUser: false,
-        timestamp: DateTime.now(),
-        persona: _activePersona.shortTitle,
-        actionItems: ['What is the best running time today?', 'Do I need sunscreen this afternoon?', 'How is road visibility for travel?'],
-      ),
+  ChatSession _createDefaultChatSession({String? title}) {
+    final now = DateTime.now();
+    return ChatSession(
+      id: 'session_${now.millisecondsSinceEpoch}',
+      title: title ?? 'New Conversation',
+      createdAt: now,
+      updatedAt: now,
+      persona: _activePersona.shortTitle,
+      messages: [_createInitialGreetingMessage()],
     );
+  }
+
+  ChatMessage _createInitialGreetingMessage() {
+    return ChatMessage(
+      id: 'msg_welcome_${DateTime.now().millisecondsSinceEpoch}',
+      text: "Hi! Ask me anything about local weather, running conditions, UV safety, crop moisture, or upload images and documents for analysis.",
+      isUser: false,
+      timestamp: DateTime.now(),
+      persona: _activePersona.shortTitle,
+      actionItems: ['What is the best running time today?', 'Do I need sunscreen this afternoon?', 'How is road visibility for travel?'],
+    );
+  }
+
+  Future<void> _persistChatSessions() async {
+    await CacheService.saveAllChatSessions(_chatSessions.map((s) => s.toJson()).toList());
+    await CacheService.saveActiveSessionId(_activeSessionId);
+  }
+
+  /// Create a brand new chat session thread
+  Future<void> createNewChatSession({String? title}) async {
+    final newSession = _createDefaultChatSession(title: title);
+    _chatSessions.insert(0, newSession);
+    _activeSessionId = newSession.id;
+    await _persistChatSessions();
+    notifyListeners();
+  }
+
+  /// Switch active chat session
+  Future<void> switchChatSession(String sessionId) async {
+    if (_chatSessions.any((s) => s.id == sessionId)) {
+      _activeSessionId = sessionId;
+      await CacheService.saveActiveSessionId(sessionId);
+      notifyListeners();
+    }
+  }
+
+  /// Delete a chat session
+  Future<void> deleteChatSession(String sessionId) async {
+    _chatSessions.removeWhere((s) => s.id == sessionId);
+    if (_chatSessions.isEmpty) {
+      final newSession = _createDefaultChatSession();
+      _chatSessions.add(newSession);
+      _activeSessionId = newSession.id;
+    } else if (_activeSessionId == sessionId) {
+      _activeSessionId = _chatSessions.first.id;
+    }
+    await _persistChatSessions();
+    notifyListeners();
+  }
+
+  /// Rename a chat session
+  Future<void> renameChatSession(String sessionId, String newTitle) async {
+    final sessionIndex = _chatSessions.indexWhere((s) => s.id == sessionId);
+    if (sessionIndex != -1 && newTitle.trim().isNotEmpty) {
+      _chatSessions[sessionIndex].title = newTitle.trim();
+      _chatSessions[sessionIndex].updatedAt = DateTime.now();
+      await _persistChatSessions();
+      notifyListeners();
+    }
+  }
+
+  String _toTitleCase(String text) {
+    if (text.isEmpty) return text;
+    return text.split(' ').map((word) {
+      if (word.isEmpty) return word;
+      final lower = word.toLowerCase();
+      // Keep known acronyms capitalized
+      if (lower == 'aqi' || lower == 'uv' || lower == 'ai' || lower == 'pm25' || lower == 'gps') {
+        return lower.toUpperCase();
+      }
+      return word[0].toUpperCase() + word.substring(1).toLowerCase();
+    }).join(' ');
+  }
+
+  String _deriveSessionTitle(String prompt, List<ChatAttachment>? attachments) {
+    if (attachments != null && attachments.isNotEmpty && prompt.trim().isEmpty) {
+      final firstAtt = attachments.first;
+      return firstAtt.isImage ? 'Image Analysis' : _toTitleCase(firstAtt.fileName.split('.').first);
+    }
+
+    String clean = prompt.trim();
+    if (clean.isEmpty) return '$_cityName Weather Check';
+
+    // Remove punctuation from ends
+    clean = clean.replaceAll(RegExp(r'[?!.,;:]+$'), '').trim();
+
+    // Check for standard greeting or generic questions
+    final lower = clean.toLowerCase();
+    final isGreeting = RegExp(
+      r'^(hi|hello|hey|how are you|how r u|good morning|good evening|good afternoon|namaste|sup|what’s up|whats up|advisor|yo)(\s+(there|advisor|ai|mausam|bot|my advisor|friend))?$',
+      caseSensitive: false,
+    ).hasMatch(lower);
+
+    if (isGreeting) {
+      return '$_cityName Weather Check';
+    }
+
+    // Strip common conversational filler prefixes
+    final stripped = clean.replaceFirst(
+      RegExp(
+        r'^(what is the|what are the|what is|what are|tell me about the|tell me about|how is the|how are the|how is|how are|can you tell me|can you give me|can you|should i|is it safe to|is it safe for|is it|do i need to|do i need|will it|please give me|please tell me|please)\s+',
+        caseSensitive: false,
+      ),
+      '',
+    ).trim();
+
+    if (stripped.isEmpty) {
+      return '$_cityName Weather Check';
+    }
+
+    // Split words and take up to 4 meaningful words
+    final words = stripped.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+    final meaningfulWords = words.take(4).toList();
+    final titleString = meaningfulWords.join(' ');
+
+    return _toTitleCase(titleString);
   }
 
   /// Change Persona and dynamically re-derive slot metrics & advisory
@@ -202,7 +418,11 @@ class WeatherProvider extends ChangeNotifier {
     _isLocationInitialized = true;
     _needsLocationSelection = false;
 
-    if (cityName == null || cityName.isEmpty || cityName.startsWith('Pin') || cityName == 'Current Location') {
+    if (cityName == null ||
+        cityName.isEmpty ||
+        cityName.startsWith('Pin') ||
+        cityName == 'Current Location' ||
+        cityName == 'My Location') {
       _cityName = await LocationService.reverseGeocode(lat, lon);
     } else {
       _cityName = cityName;
@@ -511,6 +731,16 @@ class WeatherProvider extends ChangeNotifier {
       ));
     }
 
+    // Automatically trigger notification for critical active alerts
+    if (_notificationsEnabled && _alerts.isNotEmpty) {
+      final firstAlert = _alerts.first;
+      _notificationService.showWeatherAlert(
+        id: firstAlert.id.hashCode.abs() % 10000,
+        title: '🚨 ${firstAlert.title} — $_cityName',
+        body: firstAlert.description,
+      );
+    }
+
     // 6. 6 Parameter Slots per Active Persona
     _buildPersonaSlots();
   }
@@ -529,11 +759,11 @@ class WeatherProvider extends ChangeNotifier {
 
         _personaSlots = [
           PersonaSlotData(slotIndex: 1, title: 'AQI', value: '${a.aqi} $aqiLabel', subtitle: 'PM2.5 ${a.pm2_5.toStringAsFixed(1)} µg/m³', status: aqiLabel, icon: Icons.air_rounded, color: a.aqi <= 50 ? const Color(0xFF10B981) : const Color(0xFFF59E0B), progressPercentage: (a.aqi / 200.0).clamp(0.0, 1.0)),
-          PersonaSlotData(slotIndex: 2, title: 'POLLEN (GRASS)', value: '${a.grassPollen < 10 ? 'Low' : 'Moderate'} ${a.grassPollen.round()}', subtitle: 'grains/m³', status: 'Low', icon: Icons.grass_rounded, color: const Color(0xFF10B981), progressPercentage: (a.grassPollen / 30.0).clamp(0.0, 1.0)),
-          PersonaSlotData(slotIndex: 3, title: 'POLLEN (TREE)', value: '${(a.alderPollen + a.birchPollen) < 15 ? 'Low' : 'Moderate'} ${(a.alderPollen + a.birchPollen).round()}', subtitle: 'grains/m³', status: 'Moderate', icon: Icons.park_rounded, color: const Color(0xFFF59E0B), progressPercentage: 0.45),
-          PersonaSlotData(slotIndex: 4, title: 'UV INDEX', value: '${t.uvIndex.round()} High', subtitle: 'SPF 30+ needed', status: 'High', icon: Icons.wb_sunny_rounded, color: const Color(0xFFF59E0B), progressPercentage: (t.uvIndex / 12.0).clamp(0.0, 1.0)),
-          PersonaSlotData(slotIndex: 5, title: 'HUMIDITY', value: '${t.humidity}%', subtitle: 'Mold Risk: $_moldRisk', status: 'Moderate', icon: Icons.water_drop_rounded, color: const Color(0xFF06B6D4), progressPercentage: t.humidity / 100.0),
-          PersonaSlotData(slotIndex: 6, title: 'AIR QUALITY', value: aqiLabel, subtitle: 'Safe for outdoor exercise', status: aqiLabel, icon: Icons.health_and_safety_rounded, color: const Color(0xFF10B981), progressPercentage: 0.85),
+          PersonaSlotData(slotIndex: 2, title: 'Pollen (Grass)', value: '${a.grassPollen < 10 ? 'Low' : 'Moderate'} ${a.grassPollen.round()}', subtitle: 'grains/m³', status: 'Low', icon: Icons.grass_rounded, color: const Color(0xFF10B981), progressPercentage: (a.grassPollen / 30.0).clamp(0.0, 1.0)),
+          PersonaSlotData(slotIndex: 3, title: 'Pollen (Tree)', value: '${(a.alderPollen + a.birchPollen) < 15 ? 'Low' : 'Moderate'} ${(a.alderPollen + a.birchPollen).round()}', subtitle: 'grains/m³', status: 'Moderate', icon: Icons.park_rounded, color: const Color(0xFFF59E0B), progressPercentage: 0.45),
+          PersonaSlotData(slotIndex: 4, title: 'UV Index', value: '${t.uvIndex.round()} High', subtitle: 'SPF 30+ needed', status: 'High', icon: Icons.wb_sunny_rounded, color: const Color(0xFFF59E0B), progressPercentage: (t.uvIndex / 12.0).clamp(0.0, 1.0)),
+          PersonaSlotData(slotIndex: 5, title: 'Humidity', value: '${t.humidity}%', subtitle: 'Mold Risk: $_moldRisk', status: 'Moderate', icon: Icons.water_drop_rounded, color: const Color(0xFF06B6D4), progressPercentage: t.humidity / 100.0),
+          PersonaSlotData(slotIndex: 6, title: 'Air Quality', value: aqiLabel, subtitle: 'Safe for outdoor exercise', status: aqiLabel, icon: Icons.health_and_safety_rounded, color: const Color(0xFF10B981), progressPercentage: 0.85),
         ];
         break;
 
@@ -542,12 +772,12 @@ class WeatherProvider extends ChangeNotifier {
         _actionBullet = 'Plan workout session during $_optimalRunningWindow.';
 
         _personaSlots = [
-          PersonaSlotData(slotIndex: 1, title: 'WORKOUT SAFETY', value: '$_workoutScore/100', subtitle: _workoutScore >= 75 ? 'Safe for High Intensity' : 'Moderate Heat Stress', status: 'Good', icon: Icons.fitness_center_rounded, color: const Color(0xFF8B5CF6), progressPercentage: _workoutScore / 100.0),
-          PersonaSlotData(slotIndex: 2, title: 'BEST RUN WINDOW', value: _optimalRunningWindow, subtitle: 'Optimal temperature & air', status: 'Optimal', icon: Icons.timer_rounded, color: const Color(0xFF06B6D4), progressPercentage: 0.85),
-          PersonaSlotData(slotIndex: 3, title: 'TEMPERATURE', value: '${t.currentTemperature.round()}°C', subtitle: 'Feels like ${t.apparentTemperature.round()}°C', status: 'Moderate', icon: Icons.thermostat_rounded, color: const Color(0xFFF59E0B), progressPercentage: (t.currentTemperature / 45.0).clamp(0.0, 1.0)),
-          PersonaSlotData(slotIndex: 4, title: 'HEAT HYDRATION', value: '500ml/hr', subtitle: 'Humidity at ${t.humidity}%', status: 'Moderate', icon: Icons.local_drink_rounded, color: const Color(0xFF06B6D4), progressPercentage: t.humidity / 100.0),
-          PersonaSlotData(slotIndex: 5, title: 'WIND RESISTANCE', value: '${t.windSpeed.round()} km/h', subtitle: 'From ${t.windDirectionCardinal}', status: 'Good', icon: Icons.air_rounded, color: const Color(0xFF10B981), progressPercentage: (t.windSpeed / 40.0).clamp(0.0, 1.0)),
-          PersonaSlotData(slotIndex: 6, title: 'RAIN CHANCE', value: '${t.precipitation > 0 ? 60 : 10}%', subtitle: 'Pavement traction dry', status: 'Good', icon: Icons.umbrella_rounded, color: const Color(0xFF06B6D4), progressPercentage: 0.15),
+          PersonaSlotData(slotIndex: 1, title: 'Workout Safety', value: '$_workoutScore/100', subtitle: _workoutScore >= 75 ? 'Safe for High Intensity' : 'Moderate Heat Stress', status: 'Good', icon: Icons.fitness_center_rounded, color: const Color(0xFF8B5CF6), progressPercentage: _workoutScore / 100.0),
+          PersonaSlotData(slotIndex: 2, title: 'Best Run Window', value: _optimalRunningWindow, subtitle: 'Optimal temperature & air', status: 'Optimal', icon: Icons.timer_rounded, color: const Color(0xFF06B6D4), progressPercentage: 0.85),
+          PersonaSlotData(slotIndex: 3, title: 'Temperature', value: '${t.currentTemperature.round()}°C', subtitle: 'Feels like ${t.apparentTemperature.round()}°C', status: 'Moderate', icon: Icons.thermostat_rounded, color: const Color(0xFFF59E0B), progressPercentage: (t.currentTemperature / 45.0).clamp(0.0, 1.0)),
+          PersonaSlotData(slotIndex: 4, title: 'Heat Hydration', value: '500ml/hr', subtitle: 'Humidity at ${t.humidity}%', status: 'Moderate', icon: Icons.local_drink_rounded, color: const Color(0xFF06B6D4), progressPercentage: t.humidity / 100.0),
+          PersonaSlotData(slotIndex: 5, title: 'Wind Resistance', value: '${t.windSpeed.round()} km/h', subtitle: 'From ${t.windDirectionCardinal}', status: 'Good', icon: Icons.air_rounded, color: const Color(0xFF10B981), progressPercentage: (t.windSpeed / 40.0).clamp(0.0, 1.0)),
+          PersonaSlotData(slotIndex: 6, title: 'Rain Chance', value: '${t.precipitation > 0 ? 60 : 10}%', subtitle: 'Pavement traction dry', status: 'Good', icon: Icons.umbrella_rounded, color: const Color(0xFF06B6D4), progressPercentage: 0.15),
         ];
         break;
 
@@ -556,12 +786,12 @@ class WeatherProvider extends ChangeNotifier {
         _actionBullet = 'Execute micro-irrigation schedule if deficit exceeds 3.5mm.';
 
         _personaSlots = [
-          PersonaSlotData(slotIndex: 1, title: 'IRRIGATION ADVICE', value: _irrigationAdvice.split('—')[0].trim(), subtitle: 'Deficit ${_agDeficit.toStringAsFixed(1)} mm', status: 'Optimal', icon: Icons.water_rounded, color: const Color(0xFF10B981), progressPercentage: 0.8),
-          PersonaSlotData(slotIndex: 2, title: 'SOIL MOISTURE (0-7cm)', value: '${t.soilMoisture.toStringAsFixed(2)} m³/m³', subtitle: 'Optimal range 0.22 - 0.35', status: t.soilMoisture >= 0.22 ? 'Optimal' : 'Low', icon: Icons.grass_rounded, color: const Color(0xFF10B981), progressPercentage: (t.soilMoisture / 0.4).clamp(0.0, 1.0)),
-          PersonaSlotData(slotIndex: 3, title: 'FUNGAL / MOLD RISK', value: _moldRisk, subtitle: 'Hum ${t.humidity}%, ${t.currentTemperature.round()}°C', status: _moldRisk, icon: Icons.coronavirus_rounded, color: _moldRisk == 'High' ? const Color(0xFFEF4444) : const Color(0xFF10B981), progressPercentage: _moldRisk == 'High' ? 0.85 : 0.25),
-          PersonaSlotData(slotIndex: 4, title: 'SPRAY CONDITIONS', value: t.windSpeed < 15 ? 'Favorable' : 'Unfavorable', subtitle: 'Wind at ${t.windSpeed.round()} km/h', status: 'Good', icon: Icons.science_rounded, color: const Color(0xFF10B981), progressPercentage: 0.75),
-          PersonaSlotData(slotIndex: 5, title: 'RAIN PROBABILITY', value: '${t.precipitation > 0 ? 60 : 15}%', subtitle: 'Next 24 Hours', status: 'Good', icon: Icons.cloud_rounded, color: const Color(0xFF06B6D4), progressPercentage: 0.2),
-          PersonaSlotData(slotIndex: 6, title: 'GUST HAZARD', value: '${t.windGusts.round()} km/h', subtitle: 'Safe against lodging', status: 'Good', icon: Icons.air_rounded, color: const Color(0xFF10B981), progressPercentage: (t.windGusts / 60.0).clamp(0.0, 1.0)),
+          PersonaSlotData(slotIndex: 1, title: 'Irrigation Advice', value: _irrigationAdvice.split('—')[0].trim(), subtitle: 'Deficit ${_agDeficit.toStringAsFixed(1)} mm', status: 'Optimal', icon: Icons.water_rounded, color: const Color(0xFF10B981), progressPercentage: 0.8),
+          PersonaSlotData(slotIndex: 2, title: 'Soil Moisture (0-7cm)', value: '${t.soilMoisture.toStringAsFixed(2)} m³/m³', subtitle: 'Optimal range 0.22 - 0.35', status: t.soilMoisture >= 0.22 ? 'Optimal' : 'Low', icon: Icons.grass_rounded, color: const Color(0xFF10B981), progressPercentage: (t.soilMoisture / 0.4).clamp(0.0, 1.0)),
+          PersonaSlotData(slotIndex: 3, title: 'Fungal / Mold Risk', value: _moldRisk, subtitle: 'Hum ${t.humidity}%, ${t.currentTemperature.round()}°C', status: _moldRisk, icon: Icons.coronavirus_rounded, color: _moldRisk == 'High' ? const Color(0xFFEF4444) : const Color(0xFF10B981), progressPercentage: _moldRisk == 'High' ? 0.85 : 0.25),
+          PersonaSlotData(slotIndex: 4, title: 'Spray Conditions', value: t.windSpeed < 15 ? 'Favorable' : 'Unfavorable', subtitle: 'Wind at ${t.windSpeed.round()} km/h', status: 'Good', icon: Icons.science_rounded, color: const Color(0xFF10B981), progressPercentage: 0.75),
+          PersonaSlotData(slotIndex: 5, title: 'Rain Probability', value: '${t.precipitation > 0 ? 60 : 15}%', subtitle: 'Next 24 Hours', status: 'Good', icon: Icons.cloud_rounded, color: const Color(0xFF06B6D4), progressPercentage: 0.2),
+          PersonaSlotData(slotIndex: 6, title: 'Gust Hazard', value: '${t.windGusts.round()} km/h', subtitle: 'Safe against lodging', status: 'Good', icon: Icons.air_rounded, color: const Color(0xFF10B981), progressPercentage: (t.windGusts / 60.0).clamp(0.0, 1.0)),
         ];
         break;
 
@@ -570,12 +800,12 @@ class WeatherProvider extends ChangeNotifier {
         _actionBullet = 'Great conditions for beach strolls and water activities.';
 
         _personaSlots = [
-          PersonaSlotData(slotIndex: 1, title: 'WAVE HEIGHT', value: '${waves.toStringAsFixed(1)}m', subtitle: 'Moderate clean swell', status: 'Good', icon: Icons.waves_rounded, color: const Color(0xFF06B6D4), progressPercentage: 0.6),
-          PersonaSlotData(slotIndex: 2, title: 'UV INDEX', value: '${t.uvIndex.round()} High', subtitle: 'SPF 50+ needed', status: 'High', icon: Icons.wb_sunny_rounded, color: const Color(0xFFF59E0B), progressPercentage: (t.uvIndex / 12.0).clamp(0.0, 1.0)),
-          PersonaSlotData(slotIndex: 3, title: 'SURF WIND', value: '${t.windSpeed.round()} km/h ${t.windDirectionCardinal}', subtitle: 'Offshore breeze', status: 'Optimal', icon: Icons.air_rounded, color: const Color(0xFF10B981), progressPercentage: 0.5),
-          PersonaSlotData(slotIndex: 4, title: 'WATER TEMP', value: '${(t.currentTemperature - 3).round()}°C', subtitle: 'Pleasant swim temperature', status: 'Good', icon: Icons.pool_rounded, color: const Color(0xFF06B6D4), progressPercentage: 0.7),
-          PersonaSlotData(slotIndex: 5, title: 'TIDE STATUS', value: 'Mid Tide', subtitle: 'High Tide at 16:20', status: 'Good', icon: Icons.water_rounded, color: const Color(0xFF06B6D4), progressPercentage: 0.5),
-          PersonaSlotData(slotIndex: 6, title: 'SWIM SAFETY', value: 'Green Flag', subtitle: 'Calm nearshore currents', status: 'Optimal', icon: Icons.verified_rounded, color: const Color(0xFF10B981), progressPercentage: 0.9),
+          PersonaSlotData(slotIndex: 1, title: 'Wave Height', value: '${waves.toStringAsFixed(1)}m', subtitle: 'Moderate clean swell', status: 'Good', icon: Icons.waves_rounded, color: const Color(0xFF06B6D4), progressPercentage: 0.6),
+          PersonaSlotData(slotIndex: 2, title: 'UV Index', value: '${t.uvIndex.round()} High', subtitle: 'SPF 50+ needed', status: 'High', icon: Icons.wb_sunny_rounded, color: const Color(0xFFF59E0B), progressPercentage: (t.uvIndex / 12.0).clamp(0.0, 1.0)),
+          PersonaSlotData(slotIndex: 3, title: 'Surf Wind', value: '${t.windSpeed.round()} km/h ${t.windDirectionCardinal}', subtitle: 'Offshore breeze', status: 'Optimal', icon: Icons.air_rounded, color: const Color(0xFF10B981), progressPercentage: 0.5),
+          PersonaSlotData(slotIndex: 4, title: 'Water Temp', value: '${(t.currentTemperature - 3).round()}°C', subtitle: 'Pleasant swim temperature', status: 'Good', icon: Icons.pool_rounded, color: const Color(0xFF06B6D4), progressPercentage: 0.7),
+          PersonaSlotData(slotIndex: 5, title: 'Tide Status', value: 'Mid Tide', subtitle: 'High Tide at 16:20', status: 'Good', icon: Icons.water_rounded, color: const Color(0xFF06B6D4), progressPercentage: 0.5),
+          PersonaSlotData(slotIndex: 6, title: 'Swim Safety', value: 'Green Flag', subtitle: 'Calm nearshore currents', status: 'Optimal', icon: Icons.verified_rounded, color: const Color(0xFF10B981), progressPercentage: 0.9),
         ];
         break;
 
@@ -584,12 +814,12 @@ class WeatherProvider extends ChangeNotifier {
         _actionBullet = 'Normal cruising speed recommended along main highway routes.';
 
         _personaSlots = [
-          PersonaSlotData(slotIndex: 1, title: 'COMMUTE HAZARD', value: '$_commuteHazard/100', subtitle: _commuteCondition, status: 'Good', icon: Icons.traffic_rounded, color: _commuteHazard < 30 ? const Color(0xFF10B981) : const Color(0xFFEF4444), progressPercentage: _commuteHazard / 100.0),
-          PersonaSlotData(slotIndex: 2, title: 'ROAD VISIBILITY', value: '> 8 km', subtitle: 'Zero fog disruption', status: 'Optimal', icon: Icons.visibility_rounded, color: const Color(0xFF10B981), progressPercentage: 0.9),
-          PersonaSlotData(slotIndex: 3, title: 'RAIN SLIP RISK', value: 'Low', subtitle: 'Dry road surfaces', status: 'Good', icon: Icons.water_drop_rounded, color: const Color(0xFF10B981), progressPercentage: 0.1),
-          PersonaSlotData(slotIndex: 4, title: 'CROSSWIND GUSTS', value: '${t.windGusts.round()} km/h', subtitle: 'Stable highway drive', status: 'Good', icon: Icons.air_rounded, color: const Color(0xFF10B981), progressPercentage: (t.windGusts / 60.0).clamp(0.0, 1.0)),
-          PersonaSlotData(slotIndex: 5, title: 'CABIN CLIMATE', value: '${t.currentTemperature.round()}°C', subtitle: 'AC Eco Mode recommended', status: 'Moderate', icon: Icons.ac_unit_rounded, color: const Color(0xFF06B6D4), progressPercentage: 0.6),
-          PersonaSlotData(slotIndex: 6, title: 'TRANSIT RELIABILITY', value: '98% High', subtitle: 'On-schedule traffic', status: 'Optimal', icon: Icons.schedule_rounded, color: const Color(0xFF10B981), progressPercentage: 0.95),
+          PersonaSlotData(slotIndex: 1, title: 'Commute Hazard', value: '$_commuteHazard/100', subtitle: _commuteCondition, status: 'Good', icon: Icons.traffic_rounded, color: _commuteHazard < 30 ? const Color(0xFF10B981) : const Color(0xFFEF4444), progressPercentage: _commuteHazard / 100.0),
+          PersonaSlotData(slotIndex: 2, title: 'Road Visibility', value: '> 8 km', subtitle: 'Zero fog disruption', status: 'Optimal', icon: Icons.visibility_rounded, color: const Color(0xFF10B981), progressPercentage: 0.9),
+          PersonaSlotData(slotIndex: 3, title: 'Rain Slip Risk', value: 'Low', subtitle: 'Dry road surfaces', status: 'Good', icon: Icons.water_drop_rounded, color: const Color(0xFF10B981), progressPercentage: 0.1),
+          PersonaSlotData(slotIndex: 4, title: 'Crosswind Gusts', value: '${t.windGusts.round()} km/h', subtitle: 'Stable highway drive', status: 'Good', icon: Icons.air_rounded, color: const Color(0xFF10B981), progressPercentage: (t.windGusts / 60.0).clamp(0.0, 1.0)),
+          PersonaSlotData(slotIndex: 5, title: 'Cabin Climate', value: '${t.currentTemperature.round()}°C', subtitle: 'AC Eco Mode recommended', status: 'Moderate', icon: Icons.ac_unit_rounded, color: const Color(0xFF06B6D4), progressPercentage: 0.6),
+          PersonaSlotData(slotIndex: 6, title: 'Transit Reliability', value: '98% High', subtitle: 'On-schedule traffic', status: 'Optimal', icon: Icons.schedule_rounded, color: const Color(0xFF10B981), progressPercentage: 0.95),
         ];
         break;
 
@@ -598,12 +828,12 @@ class WeatherProvider extends ChangeNotifier {
         _actionBullet = 'Keep boarding alert notifications on; clear flight routes expected.';
 
         _personaSlots = [
-          PersonaSlotData(slotIndex: 1, title: 'SIGHTSEEING INDEX', value: '9/10 Excellent', subtitle: 'Clear daylight visibility', status: 'Optimal', icon: Icons.explore_rounded, color: const Color(0xFF10B981), progressPercentage: 0.9),
-          PersonaSlotData(slotIndex: 2, title: 'PACKING ADVICE', value: 'Light Cotton + SPF', subtitle: 'UV ${t.uvIndex.round()} High', status: 'Good', icon: Icons.luggage_rounded, color: const Color(0xFF06B6D4), progressPercentage: 0.8),
-          PersonaSlotData(slotIndex: 3, title: 'FLIGHT COMFORT', value: 'Smooth', subtitle: 'Low wind shear aloft', status: 'Optimal', icon: Icons.flight_takeoff_rounded, color: const Color(0xFF10B981), progressPercentage: 0.95),
-          PersonaSlotData(slotIndex: 4, title: 'EVENING TEMP', value: '${(t.currentTemperature - 4).round()}°C', subtitle: 'Comfortable night outing', status: 'Good', icon: Icons.nightlight_rounded, color: const Color(0xFF8B5CF6), progressPercentage: 0.75),
-          PersonaSlotData(slotIndex: 5, title: 'RAIN CHANCE', value: '10% Low', subtitle: 'No cancellations', status: 'Good', icon: Icons.umbrella_rounded, color: const Color(0xFF06B6D4), progressPercentage: 0.1),
-          PersonaSlotData(slotIndex: 6, title: 'AIR QUALITY', value: 'AQI ${a.aqi}', subtitle: 'Healthy for touring', status: 'Good', icon: Icons.air_rounded, color: const Color(0xFF10B981), progressPercentage: 0.85),
+          PersonaSlotData(slotIndex: 1, title: 'Sightseeing Index', value: '9/10 Excellent', subtitle: 'Clear daylight visibility', status: 'Optimal', icon: Icons.explore_rounded, color: const Color(0xFF10B981), progressPercentage: 0.9),
+          PersonaSlotData(slotIndex: 2, title: 'Packing Advice', value: 'Light Cotton + SPF', subtitle: 'UV ${t.uvIndex.round()} High', status: 'Good', icon: Icons.luggage_rounded, color: const Color(0xFF06B6D4), progressPercentage: 0.8),
+          PersonaSlotData(slotIndex: 3, title: 'Flight Comfort', value: 'Smooth', subtitle: 'Low wind shear aloft', status: 'Optimal', icon: Icons.flight_takeoff_rounded, color: const Color(0xFF10B981), progressPercentage: 0.95),
+          PersonaSlotData(slotIndex: 4, title: 'Evening Temp', value: '${(t.currentTemperature - 4).round()}°C', subtitle: 'Comfortable night outing', status: 'Good', icon: Icons.nightlight_rounded, color: const Color(0xFF8B5CF6), progressPercentage: 0.75),
+          PersonaSlotData(slotIndex: 5, title: 'Rain Chance', value: '10% Low', subtitle: 'No cancellations', status: 'Good', icon: Icons.umbrella_rounded, color: const Color(0xFF06B6D4), progressPercentage: 0.1),
+          PersonaSlotData(slotIndex: 6, title: 'Air Quality', value: 'AQI ${a.aqi}', subtitle: 'Healthy for touring', status: 'Good', icon: Icons.air_rounded, color: const Color(0xFF10B981), progressPercentage: 0.85),
         ];
         break;
 
@@ -612,12 +842,12 @@ class WeatherProvider extends ChangeNotifier {
         _actionBullet = 'Setup shade canopies to protect guests during peak UV hours.';
 
         _personaSlots = [
-          PersonaSlotData(slotIndex: 1, title: 'EVENT FEASIBILITY', value: '88% High', subtitle: 'Low disruption probability', status: 'Optimal', icon: Icons.celebration_rounded, color: const Color(0xFF10B981), progressPercentage: 0.88),
-          PersonaSlotData(slotIndex: 2, title: 'CANOPY GUST LOAD', value: '${t.windGusts.round()} km/h', subtitle: 'Safe anchor conditions', status: 'Good', icon: Icons.air_rounded, color: const Color(0xFF10B981), progressPercentage: (t.windGusts / 50.0).clamp(0.0, 1.0)),
-          PersonaSlotData(slotIndex: 3, title: 'GUEST THERMAL INDEX', value: '${t.apparentTemperature.round()}°C Feels', subtitle: 'Provide shaded seating', status: 'Moderate', icon: Icons.thermostat_rounded, color: const Color(0xFFF59E0B), progressPercentage: (t.apparentTemperature / 45.0).clamp(0.0, 1.0)),
-          PersonaSlotData(slotIndex: 4, title: 'RAIN DISRUPTION', value: '10% Chance', subtitle: 'Dry stage conditions', status: 'Good', icon: Icons.cloud_rounded, color: const Color(0xFF06B6D4), progressPercentage: 0.1),
-          PersonaSlotData(slotIndex: 5, title: 'GOLDEN HOUR', value: '6:15 PM', subtitle: 'Ideal photography window', status: 'Optimal', icon: Icons.wb_twilight_rounded, color: const Color(0xFFF59E0B), progressPercentage: 0.8),
-          PersonaSlotData(slotIndex: 6, title: 'ACOUSTIC IMPACT', value: 'Low Wind Noise', subtitle: 'Clean outdoor audio', status: 'Good', icon: Icons.volume_up_rounded, color: const Color(0xFF10B981), progressPercentage: 0.7),
+          PersonaSlotData(slotIndex: 1, title: 'Event Feasibility', value: '88% High', subtitle: 'Low disruption probability', status: 'Optimal', icon: Icons.celebration_rounded, color: const Color(0xFF10B981), progressPercentage: 0.88),
+          PersonaSlotData(slotIndex: 2, title: 'Canopy Gust Load', value: '${t.windGusts.round()} km/h', subtitle: 'Safe anchor conditions', status: 'Good', icon: Icons.air_rounded, color: const Color(0xFF10B981), progressPercentage: (t.windGusts / 50.0).clamp(0.0, 1.0)),
+          PersonaSlotData(slotIndex: 3, title: 'Guest Thermal Index', value: '${t.apparentTemperature.round()}°C Feels', subtitle: 'Provide shaded seating', status: 'Moderate', icon: Icons.thermostat_rounded, color: const Color(0xFFF59E0B), progressPercentage: (t.apparentTemperature / 45.0).clamp(0.0, 1.0)),
+          PersonaSlotData(slotIndex: 4, title: 'Rain Disruption', value: '10% Chance', subtitle: 'Dry stage conditions', status: 'Good', icon: Icons.cloud_rounded, color: const Color(0xFF06B6D4), progressPercentage: 0.1),
+          PersonaSlotData(slotIndex: 5, title: 'Golden Hour', value: '6:15 PM', subtitle: 'Ideal photography window', status: 'Optimal', icon: Icons.wb_twilight_rounded, color: const Color(0xFFF59E0B), progressPercentage: 0.8),
+          PersonaSlotData(slotIndex: 6, title: 'Acoustic Impact', value: 'Low Wind Noise', subtitle: 'Clean outdoor audio', status: 'Good', icon: Icons.volume_up_rounded, color: const Color(0xFF10B981), progressPercentage: 0.7),
         ];
         break;
 
@@ -626,12 +856,12 @@ class WeatherProvider extends ChangeNotifier {
         _actionBullet = 'Pack full water bottles and apply sunscreen before school.';
 
         _personaSlots = [
-          PersonaSlotData(slotIndex: 1, title: 'OUTDOOR PLAY', value: 'Approved', subtitle: 'Safe air & mild weather', status: 'Optimal', icon: Icons.sports_handball_rounded, color: const Color(0xFF10B981), progressPercentage: 0.9),
-          PersonaSlotData(slotIndex: 2, title: 'SCHOOL COMMUTE', value: 'Smooth', subtitle: 'Clear roads & transit', status: 'Optimal', icon: Icons.directions_bus_rounded, color: const Color(0xFF10B981), progressPercentage: 0.95),
-          PersonaSlotData(slotIndex: 3, title: 'HYDRATION NEED', value: 'High', subtitle: 'Pack 750ml water bottle', status: 'Moderate', icon: Icons.local_drink_rounded, color: const Color(0xFF06B6D4), progressPercentage: 0.7),
-          PersonaSlotData(slotIndex: 4, title: 'UV PROTECTION', value: 'UV ${t.uvIndex.round()} High', subtitle: 'Hats & SPF recommended', status: 'High', icon: Icons.wb_sunny_rounded, color: const Color(0xFFF59E0B), progressPercentage: (t.uvIndex / 12.0).clamp(0.0, 1.0)),
-          PersonaSlotData(slotIndex: 5, title: 'ALLERGY TRIGGER', value: 'Low', subtitle: 'Grass pollen minimal', status: 'Good', icon: Icons.masks_rounded, color: const Color(0xFF10B981), progressPercentage: 0.8),
-          PersonaSlotData(slotIndex: 6, title: 'INDOOR SLEEP TEMP', value: '${(t.currentTemperature - 3).round()}°C', subtitle: 'Comfortable night cooling', status: 'Good', icon: Icons.bedtime_rounded, color: const Color(0xFF8B5CF6), progressPercentage: 0.85),
+          PersonaSlotData(slotIndex: 1, title: 'Outdoor Play', value: 'Approved', subtitle: 'Safe air & mild weather', status: 'Optimal', icon: Icons.sports_handball_rounded, color: const Color(0xFF10B981), progressPercentage: 0.9),
+          PersonaSlotData(slotIndex: 2, title: 'School Commute', value: 'Smooth', subtitle: 'Clear roads & transit', status: 'Optimal', icon: Icons.directions_bus_rounded, color: const Color(0xFF10B981), progressPercentage: 0.95),
+          PersonaSlotData(slotIndex: 3, title: 'Hydration Need', value: 'High', subtitle: 'Pack 750ml water bottle', status: 'Moderate', icon: Icons.local_drink_rounded, color: const Color(0xFF06B6D4), progressPercentage: 0.7),
+          PersonaSlotData(slotIndex: 4, title: 'UV Protection', value: 'UV ${t.uvIndex.round()} High', subtitle: 'Hats & SPF recommended', status: 'High', icon: Icons.wb_sunny_rounded, color: const Color(0xFFF59E0B), progressPercentage: (t.uvIndex / 12.0).clamp(0.0, 1.0)),
+          PersonaSlotData(slotIndex: 5, title: 'Allergy Trigger', value: 'Low', subtitle: 'Grass pollen minimal', status: 'Good', icon: Icons.masks_rounded, color: const Color(0xFF10B981), progressPercentage: 0.8),
+          PersonaSlotData(slotIndex: 6, title: 'Indoor Sleep Temp', value: '${(t.currentTemperature - 3).round()}°C', subtitle: 'Comfortable night cooling', status: 'Good', icon: Icons.bedtime_rounded, color: const Color(0xFF8B5CF6), progressPercentage: 0.85),
         ];
         break;
 
@@ -640,12 +870,12 @@ class WeatherProvider extends ChangeNotifier {
         _actionBullet = 'Wear breathable high-vis gear and safety helmet sun shields.';
 
         _personaSlots = [
-          PersonaSlotData(slotIndex: 1, title: 'HEAT STRESS INDEX', value: '${t.apparentTemperature.round()}°C Feels', subtitle: 'Stage 1 Precaution Active', status: 'Moderate', icon: Icons.warning_rounded, color: const Color(0xFFF59E0B), progressPercentage: (t.apparentTemperature / 45.0).clamp(0.0, 1.0)),
-          PersonaSlotData(slotIndex: 2, title: 'REST CYCLE', value: '10m per 50m', subtitle: 'Mandatory hydration', status: 'Moderate', icon: Icons.timer_rounded, color: const Color(0xFF06B6D4), progressPercentage: 0.6),
-          PersonaSlotData(slotIndex: 3, title: 'SCAFFOLD WIND', value: '${t.windGusts.round()} km/h', subtitle: 'Safe under 45 km/h', status: 'Good', icon: Icons.precision_manufacturing_rounded, color: const Color(0xFF10B981), progressPercentage: (t.windGusts / 60.0).clamp(0.0, 1.0)),
-          PersonaSlotData(slotIndex: 4, title: 'LIGHTNING RISK', value: '0% None', subtitle: 'Safe for crane & steel', status: 'Optimal', icon: Icons.flash_on_rounded, color: const Color(0xFF10B981), progressPercentage: 0.95),
-          PersonaSlotData(slotIndex: 5, title: 'DUST EXPOSURE', value: '${a.pm10.round()} µg/m³', subtitle: 'Wear particulate mask', status: 'Good', icon: Icons.masks_rounded, color: const Color(0xFF10B981), progressPercentage: (a.pm10 / 100.0).clamp(0.0, 1.0)),
-          PersonaSlotData(slotIndex: 6, title: 'SITE STATUS', value: 'Green Status', subtitle: 'Full shift approved', status: 'Optimal', icon: Icons.verified_user_rounded, color: const Color(0xFF10B981), progressPercentage: 0.9),
+          PersonaSlotData(slotIndex: 1, title: 'Heat Stress Index', value: '${t.apparentTemperature.round()}°C Feels', subtitle: 'Stage 1 Precaution Active', status: 'Moderate', icon: Icons.warning_rounded, color: const Color(0xFFF59E0B), progressPercentage: (t.apparentTemperature / 45.0).clamp(0.0, 1.0)),
+          PersonaSlotData(slotIndex: 2, title: 'Rest Cycle', value: '10m per 50m', subtitle: 'Mandatory hydration', status: 'Moderate', icon: Icons.timer_rounded, color: const Color(0xFF06B6D4), progressPercentage: 0.6),
+          PersonaSlotData(slotIndex: 3, title: 'Scaffold Wind', value: '${t.windGusts.round()} km/h', subtitle: 'Safe under 45 km/h', status: 'Good', icon: Icons.precision_manufacturing_rounded, color: const Color(0xFF10B981), progressPercentage: (t.windGusts / 60.0).clamp(0.0, 1.0)),
+          PersonaSlotData(slotIndex: 4, title: 'Lightning Risk', value: '0% None', subtitle: 'Safe for crane & steel', status: 'Optimal', icon: Icons.flash_on_rounded, color: const Color(0xFF10B981), progressPercentage: 0.95),
+          PersonaSlotData(slotIndex: 5, title: 'Dust Exposure', value: '${a.pm10.round()} µg/m³', subtitle: 'Wear particulate mask', status: 'Good', icon: Icons.masks_rounded, color: const Color(0xFF10B981), progressPercentage: (a.pm10 / 100.0).clamp(0.0, 1.0)),
+          PersonaSlotData(slotIndex: 6, title: 'Site Status', value: 'Green Status', subtitle: 'Full shift approved', status: 'Optimal', icon: Icons.verified_user_rounded, color: const Color(0xFF10B981), progressPercentage: 0.9),
         ];
         break;
     }
@@ -718,19 +948,30 @@ class WeatherProvider extends ChangeNotifier {
     _recomputeDerivedMetrics();
   }
 
-  /// Send Natural Language Message to AdvisorAI
-  Future<void> sendChatMessage(String messageText) async {
+  /// Send Natural Language Message to AdvisorAI with optional Multimodal Attachments
+  Future<void> sendChatMessage(String messageText, {List<ChatAttachment>? attachments}) async {
     final cleanText = messageText.trim();
-    if (cleanText.isEmpty) return;
+    final hasAttachments = attachments != null && attachments.isNotEmpty;
+    if (cleanText.isEmpty && !hasAttachments) return;
+
+    final currentSession = activeSession;
+    final historySnapshot = List<ChatMessage>.from(currentSession.messages);
+
+    // Auto-title session if it is default title or first user interaction
+    if (currentSession.title == 'New Conversation' || currentSession.title == 'New Chat' || currentSession.messages.length <= 1) {
+      currentSession.title = _deriveSessionTitle(cleanText, attachments);
+    }
+    currentSession.updatedAt = DateTime.now();
 
     final userMsg = ChatMessage(
       id: 'usr_${DateTime.now().millisecondsSinceEpoch}',
-      text: cleanText,
+      text: cleanText.isNotEmpty ? cleanText : (hasAttachments ? 'Analyze uploaded file' : ''),
       isUser: true,
       timestamp: DateTime.now(),
+      attachments: attachments ?? [],
     );
 
-    _chatMessages.add(userMsg);
+    currentSession.messages.add(userMsg);
     _isChatLoading = true;
     notifyListeners();
 
@@ -745,6 +986,8 @@ class WeatherProvider extends ChangeNotifier {
 
       final adviceText = await GeminiService.getAdvice(
         userPrompt: cleanText,
+        conversationHistory: historySnapshot,
+        attachments: attachments,
         persona: _activePersona,
         cityName: _cityName,
         temperature: _telemetry?.currentTemperature ?? 28.0,
@@ -769,8 +1012,24 @@ class WeatherProvider extends ChangeNotifier {
         actionItems: actionItems,
       );
 
-      _chatMessages.add(aiMsg);
-      await CacheService.saveChatHistory(_chatMessages.map((m) => m.toJson()).toList());
+      currentSession.messages.add(aiMsg);
+      await _persistChatSessions();
+
+      // Asynchronously refine conversation title using Gemini AI if within initial exchange
+      if (currentSession.messages.length <= 4) {
+        GeminiService.generateChatTitle(
+          userPrompt: cleanText,
+          aiResponse: adviceText,
+          cityName: _cityName,
+          persona: _activePersona.displayName,
+        ).then((aiTitle) {
+          if (aiTitle != null && aiTitle.trim().isNotEmpty) {
+            currentSession.title = _toTitleCase(aiTitle.trim());
+            _persistChatSessions();
+            notifyListeners();
+          }
+        });
+      }
     } catch (e) {
       // Provide seamless meteorological intelligence fallback when Gemini API key is not configured
       final fallbackText = _generateOfflineFallbackAdvice(cleanText);
@@ -785,8 +1044,8 @@ class WeatherProvider extends ChangeNotifier {
         actionItems: actionItems,
       );
 
-      _chatMessages.add(aiMsg);
-      await CacheService.saveChatHistory(_chatMessages.map((m) => m.toJson()).toList());
+      currentSession.messages.add(aiMsg);
+      await _persistChatSessions();
     } finally {
       _isChatLoading = false;
       notifyListeners();
@@ -832,10 +1091,13 @@ class WeatherProvider extends ChangeNotifier {
     }
   }
 
-  /// Clear chat messages
+  /// Clear active chat messages
   Future<void> clearChatHistory() async {
-    _initDefaultChatGreeting();
-    await CacheService.saveChatHistory(_chatMessages.map((m) => m.toJson()).toList());
+    final currentSession = activeSession;
+    currentSession.messages.clear();
+    currentSession.messages.add(_createInitialGreetingMessage());
+    currentSession.updatedAt = DateTime.now();
+    await _persistChatSessions();
     notifyListeners();
   }
 

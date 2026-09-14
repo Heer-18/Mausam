@@ -61,12 +61,15 @@ class _LocationSearchModalState extends State<LocationSearchModal> {
 
     final Position? pos = await LocationService.getCurrentPosition();
     if (pos != null && mounted) {
-      context.read<WeatherProvider>().updateLocation(
-        lat: pos.latitude,
-        lon: pos.longitude,
-        cityName: 'My Location',
-      );
-      Navigator.of(context).pop();
+      final String resolvedCity = await LocationService.reverseGeocode(pos.latitude, pos.longitude);
+      if (mounted) {
+        context.read<WeatherProvider>().updateLocation(
+          lat: pos.latitude,
+          lon: pos.longitude,
+          cityName: resolvedCity,
+        );
+        Navigator.of(context).pop();
+      }
     } else {
       if (mounted) {
         setState(() {

@@ -49,7 +49,7 @@ class DashboardScreen extends StatelessWidget {
             backgroundColor: AppColors.surfaceContainer,
             onRefresh: () => provider.fetchWeatherData(isRefresh: true),
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 100.0),
+              padding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 80.0),
               children: [
                 // First-time Location Prompt Banner if needed
                 if (provider.needsLocationSelection)
@@ -141,7 +141,7 @@ class DashboardScreen extends StatelessWidget {
                     telemetry: telemetry,
                     airQuality: airQuality,
                   ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
 
                 // Tier 2 Personalized Insights Section
                 PersonalizedInsightsSection(

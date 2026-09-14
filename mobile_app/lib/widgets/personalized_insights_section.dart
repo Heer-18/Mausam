@@ -159,24 +159,24 @@ class PersonalizedInsightsSection extends StatelessWidget {
         ),
         const SizedBox(height: 14),
 
-        // 6 Parameter Slots Grid (2x3)
-        if (slots.isNotEmpty)
-          GridView.builder(
-            itemCount: slots.length,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 1.65,
+        // 6 Parameter Slots (3 rows of 2 cards each)
+        if (slots.isNotEmpty) ...[
+          for (int i = 0; i < slots.length; i += 2)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12.0),
+              child: Row(
+                children: [
+                  Expanded(child: _buildParameterSlotCard(slots[i])),
+                  const SizedBox(width: 12),
+                  if (i + 1 < slots.length)
+                    Expanded(child: _buildParameterSlotCard(slots[i + 1]))
+                  else
+                    const Expanded(child: SizedBox.shrink()),
+                ],
+              ),
             ),
-            itemBuilder: (context, index) {
-              final slot = slots[index];
-              return _buildParameterSlotCard(slot);
-            },
-          ),
-        const SizedBox(height: 14),
+        ],
+        const SizedBox(height: 2),
 
         // Actionable Advisory Card
         GlassContainer(

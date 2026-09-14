@@ -3,6 +3,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import 'providers/weather_provider.dart';
 import 'screens/main_shell_screen.dart';
+import 'services/notification_service.dart';
 import 'utils/constants.dart';
 import 'utils/theme.dart';
 
@@ -17,6 +18,11 @@ void main() async {
       await dotenv.load(fileName: ".env.example");
     } catch (_) {}
   }
+
+  // Initialize System Push & Local Notification Service
+  try {
+    await NotificationService().initialize();
+  } catch (_) {}
 
   runApp(const MausamApp());
 }

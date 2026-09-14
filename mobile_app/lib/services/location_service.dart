@@ -26,8 +26,8 @@ class LocationService {
       }
 
       return await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.medium,
-        timeLimit: const Duration(seconds: 8),
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 10),
       );
     } catch (e) {
       return null;
@@ -41,7 +41,13 @@ class LocationService {
       final uri = Uri.parse(
         'https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=$lat&longitude=$lon&localityLanguage=en',
       );
-      final response = await http.get(uri).timeout(const Duration(seconds: 5));
+      final response = await http.get(
+        uri,
+        headers: {
+          'User-Agent': 'MausamApp/1.0',
+          'Accept': 'application/json',
+        },
+      ).timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -68,13 +74,19 @@ class LocationService {
       final nomRes = await http.get(
         nomUri,
         headers: {'User-Agent': 'MausamApp/1.0 (contact: mausam@app.internal)'},
-      ).timeout(const Duration(seconds: 4));
+      ).timeout(const Duration(seconds: 5));
 
       if (nomRes.statusCode == 200) {
         final nomData = jsonDecode(nomRes.body) as Map<String, dynamic>;
         final address = nomData['address'] as Map<String, dynamic>?;
         if (address != null) {
-          final city = (address['city'] ?? address['town'] ?? address['village'] ?? address['county'] ?? address['state_district']) as String?;
+          final city = (address['city'] ??
+              address['town'] ??
+              address['village'] ??
+              address['state_district'] ??
+              address['county'] ??
+              address['suburb'] ??
+              address['municipality']) as String?;
           final state = (address['state'] ?? address['country']) as String?;
           if (city != null && city.isNotEmpty) {
             if (state != null && state.isNotEmpty && city != state) {
@@ -88,7 +100,7 @@ class LocationService {
 
     // 3. Fallback: Closest popular city by geometric distance
     double minDistance = double.infinity;
-    String closestName = 'Nadiad, Gujarat';
+    String closestName = 'New Delhi, Delhi';
 
     for (final city in AppConstants.popularCities) {
       final double cLat = city['lat'];
