@@ -9,42 +9,114 @@ import '../models/persona_type.dart';
 import '../models/weather_models.dart';
 import '../utils/constants.dart';
 
+/// Exception thrown when all configured Gemini API keys have exceeded their quota / rate limits.
+class GeminiQuotaExceededException implements Exception {
+  final int totalKeysTested;
+  final String message;
+  final String? lastRawError;
+
+  GeminiQuotaExceededException({
+    required this.totalKeysTested,
+    required this.message,
+    this.lastRawError,
+  });
+
+  @override
+  String toString() => message;
+}
+
 class GeminiService {
   static final http.Client _client = http.Client();
+  static int _activeKeyIndex = 0;
 
-  /// Retrieve active Gemini API key from .env or storage
-  static Future<String> getApiKey([String? overrideKey]) async {
-    if (overrideKey != null && overrideKey.isNotEmpty) {
-      return overrideKey;
+  /// Retrieve all available Gemini API keys from .env, shared preferences, and environment variables
+  static Future<List<String>> getAllApiKeys([String? overrideKey]) async {
+    final List<String> keys = [];
+
+    // 1. Explicit override parameter
+    if (overrideKey != null && overrideKey.trim().isNotEmpty) {
+      keys.add(overrideKey.trim());
     }
 
-    // 1. SharedPreferences custom override if configured
+    // 2. SharedPreferences custom user-configured keys
     try {
       final prefs = await SharedPreferences.getInstance();
       final customKey = prefs.getString('gemini_api_key');
       if (customKey != null && customKey.trim().isNotEmpty) {
-        return customKey.trim();
+        keys.addAll(_splitKeys(customKey));
+      }
+      final customKeysList = prefs.getStringList('gemini_api_keys');
+      if (customKeysList != null) {
+        for (final k in customKeysList) {
+          if (k.trim().isNotEmpty) keys.add(k.trim());
+        }
       }
     } catch (_) {}
 
-    // 2. Primary from .env
-    final envKey = dotenv.env['GEMINI_API_KEY'] ?? dotenv.env['VITE_GEMINI_API_KEY'];
-    if (envKey != null && envKey.trim().isNotEmpty) {
-      return envKey.trim();
+    // 3. Comma / Semicolon separated GEMINI_API_KEYS in .env
+    final envMultiKeys = dotenv.env['GEMINI_API_KEYS'];
+    if (envMultiKeys != null && envMultiKeys.trim().isNotEmpty) {
+      keys.addAll(_splitKeys(envMultiKeys));
     }
 
-    // 3. Compile-time --dart-define parameter
+    // 4. Primary GEMINI_API_KEY / VITE_GEMINI_API_KEY in .env
+    final envKey = dotenv.env['GEMINI_API_KEY'];
+    if (envKey != null && envKey.trim().isNotEmpty) {
+      keys.addAll(_splitKeys(envKey));
+    }
+    final viteKey = dotenv.env['VITE_GEMINI_API_KEY'];
+    if (viteKey != null && viteKey.trim().isNotEmpty) {
+      keys.addAll(_splitKeys(viteKey));
+    }
+
+    // 5. Numbered env keys: GEMINI_API_KEY_1, GEMINI_API_KEY_2, etc.
+    for (int i = 1; i <= 10; i++) {
+      final numberedKey = dotenv.env['GEMINI_API_KEY_$i'];
+      if (numberedKey != null && numberedKey.trim().isNotEmpty) {
+        keys.add(numberedKey.trim());
+      }
+    }
+
+    // 6. Compile-time --dart-define parameter
     const dartDefineKey = String.fromEnvironment('GEMINI_API_KEY');
     if (dartDefineKey.isNotEmpty) {
-      return dartDefineKey;
+      keys.addAll(_splitKeys(dartDefineKey));
     }
 
-    // 4. Fallback constant
-    return AppConstants.defaultGeminiApiKey;
+    // 7. Fallback constant
+    if (AppConstants.defaultGeminiApiKey.isNotEmpty) {
+      keys.add(AppConstants.defaultGeminiApiKey);
+    }
+
+    // Deduplicate and filter non-empty
+    final uniqueKeys = <String>[];
+    for (final k in keys) {
+      final trimmed = k.trim();
+      if (trimmed.isNotEmpty && !uniqueKeys.contains(trimmed)) {
+        uniqueKeys.add(trimmed);
+      }
+    }
+
+    return uniqueKeys;
   }
 
-  /// Request personalized meteorological advice from Google Gemini API (gemini-2.5-flash)
-  /// with multi-turn conversation memory, multimodal image/document analysis, and full token allowance.
+  /// Helper to split comma, semicolon, or newline delimited key strings
+  static List<String> _splitKeys(String raw) {
+    return raw
+        .split(RegExp(r'[,;\n\r\t]+'))
+        .map((k) => k.trim())
+        .where((k) => k.isNotEmpty)
+        .toList();
+  }
+
+  /// Mask key for secure debugging
+  static String _maskKey(String key) {
+    if (key.length <= 8) return '***';
+    return '${key.substring(0, 4)}...${key.substring(key.length - 4)}';
+  }
+
+  /// Request personalized meteorological advice from Google Gemini API
+  /// with automatic Multi-Key Rotation and Failover upon HTTP 429 / Quota Exhaustion.
   static Future<String> getAdvice({
     required String userPrompt,
     List<ChatMessage>? conversationHistory,
@@ -62,9 +134,9 @@ class GeminiService {
     int? rainProbability,
     String? apiKeyOverride,
   }) async {
-    final apiKey = await getApiKey(apiKeyOverride);
-    if (apiKey.isEmpty) {
-      throw Exception('GEMINI_API_KEY is not set in .env. Please configure GEMINI_API_KEY in your .env file.');
+    final allKeys = await getAllApiKeys(apiKeyOverride);
+    if (allKeys.isEmpty) {
+      throw Exception('GEMINI_API_KEY is not configured. Please add GEMINI_API_KEYS=key1,key2 to your .env file.');
     }
 
     // Resolve context values
@@ -81,7 +153,7 @@ class GeminiService {
     final bool isNight = currentHour < 6 || currentHour >= 19;
     final bool zeroUv = resolvedUv <= 0.5;
 
-    // Construct hyper-local system instruction
+    // Construct hyper-local system instruction with natural conversational greetings support
     final systemPrompt = '''
 You are Mausam AdvisorAI, an expert hyper-local meteorological, lifestyle intelligence, and multimodal environmental assistant.
 
@@ -99,13 +171,13 @@ Current User & Weather Context:
 - Root Soil Moisture (0-7cm): ${telemetry?.soilMoisture.toStringAsFixed(2) ?? '0.24'} m³/m³
 - Coastal Wave Height: ${marineData?.waveHeight.toStringAsFixed(1) ?? '1.2'}m
 
-Strict Operational Guidelines:
-1. MINIMAL & CONCISE: Answer in maximum 2 to 3 short, direct sentences. Be brief and to the point.
-2. NO ROBOTIC FILLER: Do NOT say "Hello! Welcome...", "I'm your assistant...", or closing questions like "How can I help you today?". Go directly to the answer.
-3. MULTIMODAL CAPABILITY: If the user provides an image or document, carefully analyze the visual/documentary evidence (e.g. cloud formations, crop health, weather charts, tickets, damage photos) and integrate it directly into your meteorological advisory.
-4. If providing tips or action items, provide at most 2 short bullet points starting with "- " (under 8 words each).
-5. If the UV index is 0 or it is nighttime, never recommend sunscreen, hats, or daytime UV protection.
-6. Multi-turn Memory: Remember previous messages, travel routes, dates, and details from this chat conversation.
+Operational Guidelines:
+1. NATURAL GREETINGS: If the user says hello, hi, good morning/evening, or greets you, warmly greet them back in a friendly tone (e.g. "Hello! Good morning! It's currently ${resolvedTemp.round()}°C and ${telemetry?.weatherCondition ?? 'Clear'} in $resolvedCity. How can I help you today?").
+2. CONCISE & PRACTICAL: Give direct, helpful answers in 2 to 4 sentences. Avoid repetitive corporate filler.
+3. CONTEXT INTEGRATION: Weave in relevant weather conditions (temperature, rain window, UV protection, humidity, wind) whenever it relates to their questions or plans.
+4. ACTION ITEMS: If providing tips or action items, include at most 2-3 short bullet points starting with "- " (under 10 words each).
+5. NIGHT & ZERO UV: If it is nighttime or UV is 0, do NOT advise sunscreen or sunglasses.
+6. MULTIMODAL CAPABILITY: If an image or document is attached, analyze the visual/documentary evidence with meteorological insight.
 7. Use 1-2 appropriate weather emojis naturally.
 ''';
 
@@ -128,7 +200,6 @@ Strict Operational Guidelines:
             {'text': msg.text.trim()}
           ];
 
-          // Add inline data for historical attachments if any
           if (msg.attachments.isNotEmpty) {
             for (final att in msg.attachments) {
               if (att.base64Data.isNotEmpty) {
@@ -155,7 +226,7 @@ Strict Operational Guidelines:
       }
     }
 
-    // Build current user message parts with text and attachments
+    // Build current user message parts
     final List<Map<String, dynamic>> currentUserParts = [
       {'text': userPrompt.isNotEmpty ? userPrompt : 'Please analyze this attachment with hyper-local weather context.'}
     ];
@@ -183,13 +254,6 @@ Strict Operational Guidelines:
       });
     }
 
-    final primaryUri = Uri.parse(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey',
-    );
-    final fallbackUri = Uri.parse(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=$apiKey',
-    );
-
     final requestPayload = {
       'system_instruction': {
         'parts': [
@@ -198,61 +262,84 @@ Strict Operational Guidelines:
       },
       'contents': contents,
       'generationConfig': {
-        'temperature': 0.4,
+        'temperature': 0.5,
         'maxOutputTokens': 2048,
       }
     };
 
     final requestBodyJson = jsonEncode(requestPayload);
 
-    // Logging outgoing request
-    final maskedKey = apiKey.length > 8
-        ? '${apiKey.substring(0, 4)}...${apiKey.substring(apiKey.length - 4)}'
-        : '***';
-    debugPrint('[GeminiService] Outgoing POST Request to gemini-2.5-flash (key: $maskedKey)');
-    debugPrint('[GeminiService] Request Body Payload: $requestBodyJson');
+    // Multi-key failover loop
+    String? lastErrorMessage;
+    int quotaExhaustedCount = 0;
 
-    try {
-      var response = await _client
-          .post(
-            primaryUri,
-            headers: {'Content-Type': 'application/json'},
-            body: requestBodyJson,
-          )
-          .timeout(const Duration(seconds: 15));
+    for (int attempt = 0; attempt < allKeys.length; attempt++) {
+      final keyIndex = (_activeKeyIndex + attempt) % allKeys.length;
+      final currentApiKey = allKeys[keyIndex];
 
-      debugPrint('[GeminiService] HTTP Status Code: ${response.statusCode}');
+      final primaryUri = Uri.parse(
+        'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$currentApiKey',
+      );
+      final fallbackUri = Uri.parse(
+        'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=$currentApiKey',
+      );
 
-      // If gemini-2.5-flash is unavailable (404 model migration), fallback to gemini-3.6-flash
-      if (response.statusCode == 404) {
-        debugPrint('[GeminiService] gemini-2.5-flash returned 404, retrying with gemini-3.6-flash...');
-        response = await _client
+      debugPrint('[GeminiService] Attempting key ${attempt + 1}/${allKeys.length} (${_maskKey(currentApiKey)})');
+
+      try {
+        var response = await _client
             .post(
-              fallbackUri,
+              primaryUri,
               headers: {'Content-Type': 'application/json'},
               body: requestBodyJson,
             )
             .timeout(const Duration(seconds: 15));
 
-        debugPrint('[GeminiService fallback] HTTP Status Code: ${response.statusCode}');
-      }
+        // Fallback model if 404
+        if (response.statusCode == 404) {
+          debugPrint('[GeminiService] gemini-2.5-flash returned 404, attempting gemini-2.0-flash...');
+          response = await _client
+              .post(
+                fallbackUri,
+                headers: {'Content-Type': 'application/json'},
+                body: requestBodyJson,
+              )
+              .timeout(const Duration(seconds: 15));
+        }
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final candidates = data['candidates'] as List<dynamic>?;
-        if (candidates != null && candidates.isNotEmpty) {
-          final candidate = candidates[0] as Map<String, dynamic>;
-          final content = candidate['content'] as Map<String, dynamic>?;
-          final parts = content?['parts'] as List<dynamic>?;
-          if (parts != null && parts.isNotEmpty) {
-            final text = parts[0]['text'] as String?;
-            if (text != null && text.trim().isNotEmpty) {
-              return text.trim();
+        // Check for 200 OK
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body) as Map<String, dynamic>;
+          final candidates = data['candidates'] as List<dynamic>?;
+          if (candidates != null && candidates.isNotEmpty) {
+            final candidate = candidates[0] as Map<String, dynamic>;
+            final content = candidate['content'] as Map<String, dynamic>?;
+            final parts = content?['parts'] as List<dynamic>?;
+            if (parts != null && parts.isNotEmpty) {
+              final text = parts[0]['text'] as String?;
+              if (text != null && text.trim().isNotEmpty) {
+                // Success! Set this as the active key for subsequent calls
+                _activeKeyIndex = keyIndex;
+                return text.trim();
+              }
             }
           }
         }
-        throw Exception('Gemini API returned 200 OK but candidate text was empty.');
-      } else {
+
+        // Rate Limit / Quota Exceeded (HTTP 429) or Resource Exhausted
+        final isQuotaError = response.statusCode == 429 ||
+            response.body.contains('RESOURCE_EXHAUSTED') ||
+            response.body.toLowerCase().contains('quota exceeded') ||
+            response.body.toLowerCase().contains('rate limit');
+
+        if (isQuotaError) {
+          quotaExhaustedCount++;
+          debugPrint('[GeminiService] Key #${keyIndex + 1} (${_maskKey(currentApiKey)}) exceeded quota (HTTP ${response.statusCode}). Rotating to next key...');
+          lastErrorMessage = 'HTTP ${response.statusCode} Quota Exceeded: ${response.body}';
+          continue; // Try next key
+        }
+
+        // Other HTTP error
         String errorMsg = response.body;
         try {
           final decoded = jsonDecode(response.body);
@@ -260,15 +347,28 @@ Strict Operational Guidelines:
             errorMsg = decoded['error']['message'];
           }
         } catch (_) {}
-        throw Exception('Gemini API Error (HTTP ${response.statusCode}): $errorMsg');
+
+        lastErrorMessage = 'HTTP ${response.statusCode}: $errorMsg';
+        debugPrint('[GeminiService] Error with key #${keyIndex + 1}: $lastErrorMessage');
+      } catch (e) {
+        debugPrint('[GeminiService] Exception with key #${keyIndex + 1}: $e');
+        lastErrorMessage = e.toString();
       }
-    } catch (e) {
-      debugPrint('[GeminiService Error] $e');
-      rethrow;
     }
+
+    // If all keys failed
+    if (quotaExhaustedCount > 0 && quotaExhaustedCount >= allKeys.length) {
+      throw GeminiQuotaExceededException(
+        totalKeysTested: allKeys.length,
+        message: 'All $quotaExhaustedCount configured Gemini API keys have exceeded their current quota / rate limit.',
+        lastRawError: lastErrorMessage,
+      );
+    }
+
+    throw Exception('Gemini API request failed across all ${allKeys.length} configured keys. Last error: $lastErrorMessage');
   }
 
-  /// Generate a concise, intelligent 2-4 word conversation title using Gemini AI
+  /// Generate a concise conversation title with multi-key support
   static Future<String?> generateChatTitle({
     required String userPrompt,
     required String aiResponse,
@@ -276,8 +376,9 @@ Strict Operational Guidelines:
     String? persona,
   }) async {
     try {
-      final apiKey = await getApiKey();
-      if (apiKey.isEmpty) return null;
+      final allKeys = await getAllApiKeys();
+      if (allKeys.isEmpty) return null;
+      final apiKey = allKeys[_activeKeyIndex % allKeys.length];
 
       final titlePrompt = '''
 You are a concise conversation title generator for Gemini AI weather chat.

@@ -7,15 +7,19 @@ void main() {
 
   setUpAll(() {
     dotenv.testLoad(mergeWith: {
+      'GEMINI_API_KEYS': 'key_alpha,key_beta;key_gamma',
       'GEMINI_API_KEY': 'test_gemini_api_key_12345',
       'API_BASE_URL': 'http://127.0.0.1:8000',
     });
   });
 
   group('GeminiService Tests', () {
-    test('getApiKey retrieves key from dotenv testLoad', () async {
-      final key = await GeminiService.getApiKey();
-      expect(key, equals('test_gemini_api_key_12345'));
+    test('getAllApiKeys parses and deduplicates multiple keys', () async {
+      final keys = await GeminiService.getAllApiKeys();
+      expect(keys.contains('key_alpha'), isTrue);
+      expect(keys.contains('key_beta'), isTrue);
+      expect(keys.contains('key_gamma'), isTrue);
+      expect(keys.contains('test_gemini_api_key_12345'), isTrue);
     });
 
     test('extractActionItems parses bullet points properly', () {

@@ -1030,14 +1030,37 @@ class WeatherProvider extends ChangeNotifier {
           }
         });
       }
-    } catch (e) {
-      // Provide seamless meteorological intelligence fallback when Gemini API key is not configured
+    } on GeminiQuotaExceededException catch (qe) {
+      final quotaNotice = '⚠️ **Gemini API Rate Limit Reached**\n'
+          'All ${qe.totalKeysTested} configured Gemini API keys have exceeded their current per-minute or daily quota.\n\n'
+          '💡 **How to resolve:**\n'
+          '• Please wait 1-2 minutes for Google\'s free-tier rate limit to reset.\n'
+          '• Or add multiple Gemini API keys to your `.env` file (e.g. `GEMINI_API_KEYS=key1,key2,key3`).';
+
       final fallbackText = _generateOfflineFallbackAdvice(cleanText);
+      final combinedText = '$quotaNotice\n\n---\n**Offline Weather Advisory:**\n$fallbackText';
+      final actionItems = GeminiService.extractActionItems(fallbackText);
+
+      final aiMsg = ChatMessage(
+        id: 'ai_quota_${DateTime.now().millisecondsSinceEpoch}',
+        text: combinedText,
+        isUser: false,
+        timestamp: DateTime.now(),
+        persona: _activePersona.shortTitle,
+        actionItems: actionItems,
+      );
+
+      currentSession.messages.add(aiMsg);
+      await _persistChatSessions();
+    } catch (e) {
+      final errorPrefix = '⚠️ **AdvisorAI Notice**: $e\n\n';
+      final fallbackText = _generateOfflineFallbackAdvice(cleanText);
+      final combinedText = '$errorPrefix---\n**Offline Weather Advisory:**\n$fallbackText';
       final actionItems = GeminiService.extractActionItems(fallbackText);
 
       final aiMsg = ChatMessage(
         id: 'ai_fallback_${DateTime.now().millisecondsSinceEpoch}',
-        text: fallbackText,
+        text: combinedText,
         isUser: false,
         timestamp: DateTime.now(),
         persona: _activePersona.shortTitle,
@@ -1075,6 +1098,19 @@ class WeatherProvider extends ChangeNotifier {
     );
     final a = _airQuality ?? AirQualityData(aqi: 42, pm2_5: 14.2, pm10: 35.0, grassPollen: 8.0, ragweedPollen: 2.0);
     final temp = t.currentTemperature.round();
+    final lowerPrompt = prompt.toLowerCase().trim();
+
+    // Check for greeting exchange
+    final isGreeting = RegExp(
+      r'^(hi|hello|hey|good morning|good afternoon|good evening|good night|namaste|how are you|how r u|sup|yo|what’s up|whats up)',
+      caseSensitive: false,
+    ).hasMatch(lowerPrompt);
+
+    if (isGreeting) {
+      final hour = DateTime.now().hour;
+      final timeGreeting = hour < 12 ? 'Good morning' : (hour < 17 ? 'Good afternoon' : 'Good evening');
+      return '$timeGreeting! 👋 Currently in $_cityName, it is $temp°C and ${t.weatherCondition} with an AQI of ${a.aqi}. How can I assist you today?\n- Ask about today\'s best workout window\n- Ask about rain timing and humidity';
+    }
 
     switch (_activePersona) {
       case PersonaType.fitness:
