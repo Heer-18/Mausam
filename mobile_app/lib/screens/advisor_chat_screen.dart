@@ -1110,11 +1110,29 @@ class _ChatSessionsModal extends StatefulWidget {
 class _ChatSessionsModalState extends State<_ChatSessionsModal> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  final Set<String> _deletingSessionIds = {};
 
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _animateAndDeleteSession(String sessionId) async {
+    if (_deletingSessionIds.contains(sessionId)) return;
+    setState(() {
+      _deletingSessionIds.add(sessionId);
+    });
+
+    // Animate smoothly: slide left, fade out, shrink
+    await Future.delayed(const Duration(milliseconds: 320));
+
+    if (mounted) {
+      widget.provider.deleteChatSession(sessionId);
+      setState(() {
+        _deletingSessionIds.remove(sessionId);
+      });
+    }
   }
 
   void _showRenameDialog(ChatSession session) {
@@ -1266,142 +1284,194 @@ class _ChatSessionsModalState extends State<_ChatSessionsModal> {
                       itemBuilder: (context, index) {
                         final session = sessions[index];
                         final isActive = session.id == widget.provider.activeSessionId;
+                        final isDeleting = _deletingSessionIds.contains(session.id);
 
-                        return InkWell(
-                          onTap: () {
-                            widget.provider.switchChatSession(session.id);
-                            Navigator.pop(context);
-                          },
-                          borderRadius: BorderRadius.circular(16),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        return Dismissible(
+                          key: Key('session_${session.id}'),
+                          direction: DismissDirection.endToStart,
+                          background: Container(
+                            alignment: Alignment.centerRight,
+                            padding: const EdgeInsets.only(right: 20),
                             decoration: BoxDecoration(
-                              color: isActive
-                                  ? AppColors.primary.withOpacity(0.12)
-                                  : AppColors.surface.withOpacity(0.4),
+                              color: AppColors.alertRed.withOpacity(0.2),
                               borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: isActive
-                                    ? AppColors.primary.withOpacity(0.6)
-                                    : AppColors.glassBorder,
-                                width: isActive ? 1.5 : 1.0,
-                              ),
+                              border: Border.all(color: AppColors.alertRed.withOpacity(0.5)),
                             ),
-                            child: Row(
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
-                                Container(
-                                  width: 36,
-                                  height: 36,
-                                  decoration: BoxDecoration(
-                                    color: isActive
-                                        ? AppColors.primary.withOpacity(0.2)
-                                        : Colors.white.withOpacity(0.05),
-                                    shape: BoxShape.circle,
+                                Icon(Icons.delete_outline_rounded, color: AppColors.alertRed, size: 20),
+                                SizedBox(width: 6),
+                                Text(
+                                  'Delete',
+                                  style: TextStyle(
+                                    color: AppColors.alertRed,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
                                   ),
-                                  child: Icon(
-                                    isActive ? Icons.chat_bubble_rounded : Icons.chat_bubble_outline_rounded,
-                                    color: isActive ? AppColors.primary : AppColors.onSurfaceVariant,
-                                    size: 18,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          Expanded(
-                                            child: Text(
-                                              session.title,
-                                              style: AppTypography.titleMd.copyWith(
-                                                fontSize: 14,
-                                                fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
-                                                color: isActive ? Colors.white : AppColors.onSurface,
-                                              ),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                          if (isActive)
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                              margin: const EdgeInsets.only(left: 6),
-                                              decoration: BoxDecoration(
-                                                color: AppColors.primary.withOpacity(0.2),
-                                                borderRadius: BorderRadius.circular(6),
-                                              ),
-                                              child: Text(
-                                                'Active',
-                                                style: AppTypography.labelCaps.copyWith(
-                                                  fontSize: 9,
-                                                  color: AppColors.primary,
-                                                ),
-                                              ),
-                                            ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 3),
-                                      Row(
-                                        children: [
-                                          Text(
-                                            _formatSessionTime(session.updatedAt),
-                                            style: AppTypography.bodySm.copyWith(
-                                              fontSize: 11,
-                                              color: AppColors.onSurfaceVariant,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Text(
-                                            '• ${session.messages.length} messages',
-                                            style: AppTypography.bodySm.copyWith(
-                                              fontSize: 11,
-                                              color: AppColors.onSurfaceVariant.withOpacity(0.7),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                PopupMenuButton<String>(
-                                  icon: const Icon(Icons.more_vert_rounded, color: AppColors.onSurfaceVariant, size: 20),
-                                  color: const Color(0xFF0F172A),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    side: const BorderSide(color: AppColors.glassBorderBright),
-                                  ),
-                                  onSelected: (action) {
-                                    if (action == 'rename') {
-                                      _showRenameDialog(session);
-                                    } else if (action == 'delete') {
-                                      widget.provider.deleteChatSession(session.id);
-                                    }
-                                  },
-                                  itemBuilder: (ctx) => [
-                                    const PopupMenuItem(
-                                      value: 'rename',
-                                      child: Row(
-                                        children: [
-                                          Icon(Icons.drive_file_rename_outline_rounded, size: 18, color: Colors.white),
-                                          SizedBox(width: 8),
-                                          Text('Rename Conversation', style: TextStyle(color: Colors.white, fontSize: 13)),
-                                        ],
-                                      ),
-                                    ),
-                                    PopupMenuItem(
-                                      value: 'delete',
-                                      child: Row(
-                                        children: [
-                                          Icon(Icons.delete_outline_rounded, size: 18, color: AppColors.alertRed),
-                                          const SizedBox(width: 8),
-                                          Text('Delete Conversation', style: TextStyle(color: AppColors.alertRed, fontSize: 13)),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
                                 ),
                               ],
+                            ),
+                          ),
+                          onDismissed: (_) {
+                            widget.provider.deleteChatSession(session.id);
+                          },
+                          child: AnimatedSize(
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeInOutCubic,
+                            child: AnimatedSlide(
+                              offset: isDeleting ? const Offset(-1.2, 0) : Offset.zero,
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.easeInOutCubic,
+                              child: AnimatedOpacity(
+                                opacity: isDeleting ? 0.0 : 1.0,
+                                duration: const Duration(milliseconds: 250),
+                                curve: Curves.easeOut,
+                                child: isDeleting
+                                    ? const SizedBox(width: double.infinity, height: 0)
+                                    : InkWell(
+                                        onTap: () {
+                                          widget.provider.switchChatSession(session.id);
+                                          Navigator.pop(context);
+                                        },
+                                        borderRadius: BorderRadius.circular(16),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                          decoration: BoxDecoration(
+                                            color: isDeleting
+                                                ? AppColors.alertRed.withOpacity(0.15)
+                                                : (isActive
+                                                    ? AppColors.primary.withOpacity(0.12)
+                                                    : AppColors.surface.withOpacity(0.4)),
+                                            borderRadius: BorderRadius.circular(16),
+                                            border: Border.all(
+                                              color: isDeleting
+                                                  ? AppColors.alertRed.withOpacity(0.6)
+                                                  : (isActive
+                                                      ? AppColors.primary.withOpacity(0.6)
+                                                      : AppColors.glassBorder),
+                                              width: (isActive || isDeleting) ? 1.5 : 1.0,
+                                            ),
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              Container(
+                                                width: 36,
+                                                height: 36,
+                                                decoration: BoxDecoration(
+                                                  color: isActive
+                                                      ? AppColors.primary.withOpacity(0.2)
+                                                      : Colors.white.withOpacity(0.05),
+                                                  shape: BoxShape.circle,
+                                                ),
+                                                child: Icon(
+                                                  isActive ? Icons.chat_bubble_rounded : Icons.chat_bubble_outline_rounded,
+                                                  color: isActive ? AppColors.primary : AppColors.onSurfaceVariant,
+                                                  size: 18,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 12),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Row(
+                                                      children: [
+                                                        Expanded(
+                                                          child: Text(
+                                                            session.title,
+                                                            style: AppTypography.titleMd.copyWith(
+                                                              fontSize: 14,
+                                                              fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                                                              color: isActive ? Colors.white : AppColors.onSurface,
+                                                            ),
+                                                            maxLines: 1,
+                                                            overflow: TextOverflow.ellipsis,
+                                                          ),
+                                                        ),
+                                                        if (isActive)
+                                                          Container(
+                                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                            margin: const EdgeInsets.only(left: 6),
+                                                            decoration: BoxDecoration(
+                                                              color: AppColors.primary.withOpacity(0.2),
+                                                              borderRadius: BorderRadius.circular(6),
+                                                            ),
+                                                            child: Text(
+                                                              'Active',
+                                                              style: AppTypography.labelCaps.copyWith(
+                                                                fontSize: 9,
+                                                                color: AppColors.primary,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                      ],
+                                                    ),
+                                                    const SizedBox(height: 3),
+                                                    Row(
+                                                      children: [
+                                                        Text(
+                                                          _formatSessionTime(session.updatedAt),
+                                                          style: AppTypography.bodySm.copyWith(
+                                                            fontSize: 11,
+                                                            color: AppColors.onSurfaceVariant,
+                                                          ),
+                                                        ),
+                                                        const SizedBox(width: 8),
+                                                        Text(
+                                                          '• ${session.messages.length} messages',
+                                                          style: AppTypography.bodySm.copyWith(
+                                                            fontSize: 11,
+                                                            color: AppColors.onSurfaceVariant.withOpacity(0.7),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              PopupMenuButton<String>(
+                                                icon: const Icon(Icons.more_vert_rounded, color: AppColors.onSurfaceVariant, size: 20),
+                                                color: const Color(0xFF0F172A),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius: BorderRadius.circular(12),
+                                                  side: const BorderSide(color: AppColors.glassBorderBright),
+                                                ),
+                                                onSelected: (action) {
+                                                  if (action == 'rename') {
+                                                    _showRenameDialog(session);
+                                                  } else if (action == 'delete') {
+                                                    _animateAndDeleteSession(session.id);
+                                                  }
+                                                },
+                                                itemBuilder: (ctx) => [
+                                                  const PopupMenuItem(
+                                                    value: 'rename',
+                                                    child: Row(
+                                                      children: [
+                                                        Icon(Icons.drive_file_rename_outline_rounded, size: 18, color: Colors.white),
+                                                        SizedBox(width: 8),
+                                                        Text('Rename Conversation', style: TextStyle(color: Colors.white, fontSize: 13)),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                  PopupMenuItem(
+                                                    value: 'delete',
+                                                    child: Row(
+                                                      children: [
+                                                        Icon(Icons.delete_outline_rounded, size: 18, color: AppColors.alertRed),
+                                                        const SizedBox(width: 8),
+                                                        Text('Delete Conversation', style: TextStyle(color: AppColors.alertRed, fontSize: 13)),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                              ),
                             ),
                           ),
                         );

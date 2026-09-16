@@ -13,6 +13,7 @@ class GlassContainer extends StatelessWidget {
   final Color? borderColor;
   final double borderWidth;
   final double blurSigma;
+  final bool useBlur;
   final VoidCallback? onTap;
   final Gradient? gradient;
   final List<BoxShadow>? boxShadow;
@@ -28,7 +29,8 @@ class GlassContainer extends StatelessWidget {
     this.fillColor = AppColors.glassFill,
     this.borderColor = AppColors.glassBorder,
     this.borderWidth = 1.0,
-    this.blurSigma = 12.0,
+    this.blurSigma = 0.0,
+    this.useBlur = false,
     this.onTap,
     this.gradient,
     this.boxShadow,
@@ -36,6 +38,20 @@ class GlassContainer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    Widget innerBox = Container(
+      padding: padding,
+      decoration: BoxDecoration(
+        color: gradient == null ? fillColor : null,
+        gradient: gradient,
+        borderRadius: BorderRadius.circular(borderRadius),
+        border: Border.all(
+          color: borderColor ?? AppColors.glassBorder,
+          width: borderWidth,
+        ),
+      ),
+      child: child,
+    );
+
     Widget content = Container(
       width: width,
       height: height,
@@ -51,25 +67,15 @@ class GlassContainer extends StatelessWidget {
               ),
             ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(borderRadius),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
-          child: Container(
-            padding: padding,
-            decoration: BoxDecoration(
-              color: gradient == null ? fillColor : null,
-              gradient: gradient,
+      child: (useBlur && blurSigma > 0)
+          ? ClipRRect(
               borderRadius: BorderRadius.circular(borderRadius),
-              border: Border.all(
-                color: borderColor ?? AppColors.glassBorder,
-                width: borderWidth,
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
+                child: innerBox,
               ),
-            ),
-            child: child,
-          ),
-        ),
-      ),
+            )
+          : innerBox,
     );
 
     if (onTap != null) {
