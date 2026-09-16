@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import '../models/weather_parameter_definition.dart';
 import '../models/persona_type.dart';
 import '../models/weather_models.dart';
 import '../models/chat_message.dart';
@@ -10,13 +11,35 @@ import '../services/gemini_service.dart';
 import '../services/location_service.dart';
 import '../services/cache_service.dart';
 import '../services/notification_service.dart';
+import '../services/dynamic_icon_service.dart';
 import '../utils/constants.dart';
+import '../utils/theme.dart';
 import '../utils/weather_math.dart';
 
 class WeatherProvider extends ChangeNotifier {
   final WeatherApiService _apiService = WeatherApiService();
   final NotificationService _notificationService = NotificationService();
   bool _notificationsEnabled = true;
+
+  // Homescreen Section Customization State
+  bool _showMiniMetrics = true;
+  bool _showPersonalizedInsights = true;
+  bool _showHourlyForecast = true;
+  bool _showDailyForecast = true;
+  bool _showCelestialAlmanac = true;
+
+  // Custom Parameter Selection State
+  List<String> _activeParameterIds = ['aqi', 'grass_pollen', 'tree_pollen', 'uv_index', 'humidity', 'temperature'];
+
+  // Units & Formats
+  String _tempUnit = 'C'; // 'C' or 'F'
+  String _windUnit = 'km/h'; // 'km/h', 'mph', 'm/s'
+
+  // Notification Automation Preferences
+  bool _isAutoNotificationsActive = true;
+  bool _isWittyAlertsActive = true;
+  bool _isMorningBriefingActive = true;
+  String _dynamicIconTheme = 'auto';
 
   // Location State
   double _currentLat = AppConstants.fallbackLat;
@@ -65,7 +88,21 @@ class WeatherProvider extends ChangeNotifier {
   bool _isRefreshing = false;
   String? _errorMessage;
 
-  // Getters
+  // Getters - Customization & Preferences
+  bool get showMiniMetrics => _showMiniMetrics;
+  bool get showPersonalizedInsights => _showPersonalizedInsights;
+  bool get showHourlyForecast => _showHourlyForecast;
+  bool get showDailyForecast => _showDailyForecast;
+  bool get showCelestialAlmanac => _showCelestialAlmanac;
+
+  String get tempUnit => _tempUnit;
+  String get windUnit => _windUnit;
+  bool get isAutoNotificationsActive => _isAutoNotificationsActive;
+  bool get isWittyAlertsActive => _isWittyAlertsActive;
+  bool get isMorningBriefingActive => _isMorningBriefingActive;
+  String get dynamicIconTheme => _dynamicIconTheme;
+
+  // Getters - Core State
   double get currentLat => _currentLat;
   double get currentLon => _currentLon;
   String get cityName => _cityName;
@@ -153,6 +190,217 @@ class WeatherProvider extends ChangeNotifier {
     );
   }
 
+  // Custom Selected Parameter IDs
+  List<String> get activeParameterIds => List.unmodifiable(_activeParameterIds);
+
+  /// Toggle selection of a parameter metric
+  Future<void> toggleParameterSelection(String paramId) async {
+    if (_activeParameterIds.contains(paramId)) {
+      if (_activeParameterIds.length > 1) {
+        _activeParameterIds.remove(paramId);
+      }
+    } else {
+      _activeParameterIds.add(paramId);
+    }
+    await CacheService.saveStringList(CacheService.getPersonaCustomParamsKey(_activePersona.name), _activeParameterIds);
+    await CacheService.saveStringList(CacheService.keyCustomParameterIds, _activeParameterIds);
+    _buildPersonaSlots();
+    notifyListeners();
+  }
+
+  /// Reset parameter metrics to persona defaults
+  Future<void> resetParametersToDefault() async {
+    _activeParameterIds = List<String>.from(_getDefaultParameterIdsForPersona(_activePersona));
+    await CacheService.saveStringList(CacheService.getPersonaCustomParamsKey(_activePersona.name), _activeParameterIds);
+    await CacheService.saveStringList(CacheService.keyCustomParameterIds, _activeParameterIds);
+    _buildPersonaSlots();
+    notifyListeners();
+  }
+
+  List<String> _getDefaultParameterIdsForPersona(PersonaType persona) {
+    switch (persona) {
+      case PersonaType.health:
+        return ['aqi', 'grass_pollen', 'tree_pollen', 'uv_index', 'humidity', 'temperature'];
+      case PersonaType.fitness:
+        return ['workout_score', 'best_run_window', 'temperature', 'apparent_temperature', 'wind_speed', 'rain_probability'];
+      case PersonaType.farm:
+        return ['irrigation_advice', 'soil_moisture', 'mold_risk', 'wind_speed', 'rain_probability', 'wind_gusts'];
+      case PersonaType.beach:
+        return ['wave_height', 'uv_index', 'wind_speed', 'temperature', 'surface_pressure', 'rain_probability'];
+      case PersonaType.commute:
+        return ['commute_hazard', 'visibility', 'rain_probability', 'wind_gusts', 'apparent_temperature', 'temperature'];
+      case PersonaType.travel:
+        return ['temperature', 'uv_index', 'visibility', 'apparent_temperature', 'rain_probability', 'aqi'];
+      case PersonaType.events:
+        return ['apparent_temperature', 'wind_gusts', 'rain_probability', 'cloud_cover', 'temperature', 'uv_index'];
+      case PersonaType.family:
+        return ['aqi', 'temperature', 'uv_index', 'humidity', 'grass_pollen', 'rain_probability'];
+      case PersonaType.work:
+        return ['apparent_temperature', 'wind_gusts', 'pm10', 'temperature', 'uv_index', 'humidity'];
+    }
+  }
+
+  /// Setters for Homescreen Customization
+  Future<void> setShowMiniMetrics(bool val) async {
+    _showMiniMetrics = val;
+    await CacheService.saveBool(CacheService.keyShowMiniMetrics, val);
+    notifyListeners();
+  }
+
+  Future<void> setShowPersonalizedInsights(bool val) async {
+    _showPersonalizedInsights = val;
+    await CacheService.saveBool(CacheService.keyShowPersonalizedInsights, val);
+    notifyListeners();
+  }
+
+  Future<void> setShowHourlyForecast(bool val) async {
+    _showHourlyForecast = val;
+    await CacheService.saveBool(CacheService.keyShowHourlyForecast, val);
+    notifyListeners();
+  }
+
+  Future<void> setShowDailyForecast(bool val) async {
+    _showDailyForecast = val;
+    await CacheService.saveBool(CacheService.keyShowDailyForecast, val);
+    notifyListeners();
+  }
+
+  Future<void> setShowCelestialAlmanac(bool val) async {
+    _showCelestialAlmanac = val;
+    await CacheService.saveBool(CacheService.keyShowCelestialAlmanac, val);
+    notifyListeners();
+  }
+
+  Future<void> setTempUnit(String unit) async {
+    _tempUnit = unit;
+    await CacheService.saveString(CacheService.keyTemperatureUnit, unit);
+    _buildPersonaSlots();
+    notifyListeners();
+  }
+
+  Future<void> setWindUnit(String unit) async {
+    _windUnit = unit;
+    await CacheService.saveString(CacheService.keyWindSpeedUnit, unit);
+    _buildPersonaSlots();
+    notifyListeners();
+  }
+
+  Future<void> setAutoNotifications(bool val) async {
+    _isAutoNotificationsActive = val;
+    await CacheService.saveBool(CacheService.keyAutoNotifications, val);
+    notifyListeners();
+  }
+
+  Future<void> setWittyAlerts(bool val) async {
+    _isWittyAlertsActive = val;
+    await CacheService.saveBool(CacheService.keyWittyAlerts, val);
+    notifyListeners();
+  }
+
+  Future<void> setMorningBriefing(bool val) async {
+    _isMorningBriefingActive = val;
+    await CacheService.saveBool(CacheService.keyMorningBriefing, val);
+    notifyListeners();
+  }
+
+  Future<void> setDynamicIconTheme(String theme) async {
+    _dynamicIconTheme = theme;
+    await CacheService.saveString(CacheService.keyDynamicIconTheme, theme);
+    if (_telemetry != null) {
+      final isNight = DateTime.now().hour < 6 || DateTime.now().hour >= 19;
+      await DynamicIconService.updateWeatherAdaptiveIcon(
+        weatherCode: _telemetry!.weatherCode,
+        isNight: isNight,
+      );
+    }
+    notifyListeners();
+  }
+
+  /// Convert and format temperature according to user preference
+  String formatTemperature(double celsius) {
+    if (_tempUnit == 'F') {
+      final f = (celsius * 9 / 5) + 32;
+      return '${f.round()}°F';
+    }
+    return '${celsius.round()}°C';
+  }
+
+  /// Convert and format wind speed according to user preference
+  String formatWindSpeed(double kmh) {
+    if (_windUnit == 'mph') {
+      final mph = kmh * 0.621371;
+      return '${mph.round()} mph';
+    } else if (_windUnit == 'm/s') {
+      final ms = kmh / 3.6;
+      return '${ms.toStringAsFixed(1)} m/s';
+    }
+    return '${kmh.round()} km/h';
+  }
+
+  /// Dispatch Automated Contextual Weather Notifications & Good Morning Briefings
+  Future<void> checkAndDispatchAutomatedNotifications() async {
+    if (!_notificationsEnabled || !_isAutoNotificationsActive || _telemetry == null) return;
+
+    final t = _telemetry!;
+    final now = DateTime.now();
+    final todayStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+
+    // 1. Morning Briefing Check (between 6:00 AM and 10:59 AM)
+    if (_isMorningBriefingActive && now.hour >= 6 && now.hour < 11) {
+      final lastMorningDate = await CacheService.getString(CacheService.keyLastMorningDate);
+      if (lastMorningDate != todayStr) {
+        await CacheService.saveString(CacheService.keyLastMorningDate, todayStr);
+        final tip = _advisorySummary.isNotEmpty
+            ? _advisorySummary
+            : 'Conditions are favorable for your daily outdoor schedule.';
+        await _notificationService.showDailyBriefing(
+          id: 303,
+          cityName: _cityName,
+          temperature: t.currentTemperature,
+          condition: t.weatherCondition,
+          advice: tip,
+        );
+      }
+    }
+
+    // 2. Contextual / Witty Zomato-style Weather Alert Check
+    if (_isWittyAlertsActive) {
+      final lastWittyTime = await CacheService.getInt(CacheService.keyLastWittyAlertTime, defaultValue: 0);
+      final currentMillis = now.millisecondsSinceEpoch;
+      // Minimum 2.5 hours throttle between contextual ambient alerts
+      if (currentMillis - lastWittyTime > 9000000) {
+        String? wittyTitle;
+        String? wittyBody;
+
+        if (t.precipitation > 0 || (t.weatherCode >= 51 && t.weatherCode <= 67) || (t.weatherCode >= 80 && t.weatherCode <= 82)) {
+          wittyTitle = 'Chai-Pakoda Weather Alert! ☕🌧️';
+          wittyBody = 'It\'s raining in $_cityName (${t.currentTemperature.round()}°C). Perfect excuse to grab hot samosas and stay cozy!';
+        } else if (t.currentTemperature >= 34.0) {
+          wittyTitle = 'The Sun is in Main Character mode! 🕶️🔥';
+          wittyBody = '${t.currentTemperature.round()}°C in $_cityName! Chilled nimbu pani or iced coffee is strictly mandatory today.';
+        } else if (t.uvIndex >= 7.0 && now.hour >= 11 && now.hour <= 16) {
+          wittyTitle = 'SPF is your best friend today! 🧴☀️';
+          wittyBody = 'High UV index (${t.uvIndex.round()}) in $_cityName. Slather on sunscreen before stepping out.';
+        } else if (now.hour >= 17 && now.hour <= 19 && t.weatherCode <= 3) {
+          wittyTitle = 'Golden Hour Calling! 🌅✨';
+          wittyBody = 'Pleasant ${t.currentTemperature.round()}°C in $_cityName with gentle breeze. Perfect time for an evening stroll!';
+        } else if (t.currentTemperature <= 18.0) {
+          wittyTitle = 'Cozy Hoodie Weather Unlocked! 🧥✨';
+          wittyBody = 'Crisp ${t.currentTemperature.round()}°C in $_cityName. Keep that warm jacket handy.';
+        }
+
+        if (wittyTitle != null && wittyBody != null) {
+          await CacheService.saveInt(CacheService.keyLastWittyAlertTime, currentMillis);
+          await _notificationService.showWittyWeatherTip(
+            id: 404,
+            title: wittyTitle,
+            body: wittyBody,
+          );
+        }
+      }
+    }
+  }
+
   /// Toggle notification permissions
   Future<void> toggleNotifications(bool enabled) async {
     _notificationsEnabled = enabled;
@@ -167,6 +415,20 @@ class WeatherProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
+    // 0. Load saved customization preferences
+    _showMiniMetrics = await CacheService.getBool(CacheService.keyShowMiniMetrics, defaultValue: true);
+    _showPersonalizedInsights = await CacheService.getBool(CacheService.keyShowPersonalizedInsights, defaultValue: true);
+    _showHourlyForecast = await CacheService.getBool(CacheService.keyShowHourlyForecast, defaultValue: true);
+    _showDailyForecast = await CacheService.getBool(CacheService.keyShowDailyForecast, defaultValue: true);
+    _showCelestialAlmanac = await CacheService.getBool(CacheService.keyShowCelestialAlmanac, defaultValue: true);
+
+    _tempUnit = await CacheService.getString(CacheService.keyTemperatureUnit, defaultValue: 'C');
+    _windUnit = await CacheService.getString(CacheService.keyWindSpeedUnit, defaultValue: 'km/h');
+    _isAutoNotificationsActive = await CacheService.getBool(CacheService.keyAutoNotifications, defaultValue: true);
+    _isWittyAlertsActive = await CacheService.getBool(CacheService.keyWittyAlerts, defaultValue: true);
+    _isMorningBriefingActive = await CacheService.getBool(CacheService.keyMorningBriefing, defaultValue: true);
+    _dynamicIconTheme = await CacheService.getString(CacheService.keyDynamicIconTheme, defaultValue: 'auto');
+
     // 1. Load saved persona
     final savedPersonaName = await CacheService.getSavedPersona();
     if (savedPersonaName != null) {
@@ -176,6 +438,14 @@ class WeatherProvider extends ChangeNotifier {
           break;
         }
       }
+    }
+
+    // Load parameters for active persona
+    final savedPersonaParams = await CacheService.getStringList(CacheService.getPersonaCustomParamsKey(_activePersona.name));
+    if (savedPersonaParams != null && savedPersonaParams.isNotEmpty) {
+      _activeParameterIds = List<String>.from(savedPersonaParams);
+    } else {
+      _activeParameterIds = List<String>.from(_getDefaultParameterIdsForPersona(_activePersona));
     }
 
     // 2. Load saved multi-session chat threads
@@ -401,6 +671,15 @@ class WeatherProvider extends ChangeNotifier {
   Future<void> switchPersona(PersonaType newPersona) async {
     _activePersona = newPersona;
     await CacheService.savePersona(newPersona.name);
+
+    // Load custom parameters specific to this persona or use persona defaults
+    final savedPersonaParams = await CacheService.getStringList(CacheService.getPersonaCustomParamsKey(newPersona.name));
+    if (savedPersonaParams != null && savedPersonaParams.isNotEmpty) {
+      _activeParameterIds = List<String>.from(savedPersonaParams);
+    } else {
+      _activeParameterIds = List<String>.from(_getDefaultParameterIdsForPersona(newPersona));
+    }
+
     _recomputeDerivedMetrics();
     notifyListeners();
   }
@@ -652,6 +931,11 @@ class WeatherProvider extends ChangeNotifier {
     }
 
     _recomputeDerivedMetrics();
+    checkAndDispatchAutomatedNotifications();
+    DynamicIconService.updateWeatherAdaptiveIcon(
+      weatherCode: wCode,
+      isNight: (DateTime.now().hour < 6 || DateTime.now().hour >= 19),
+    );
   }
 
   void _recomputeDerivedMetrics() {
@@ -749,135 +1033,85 @@ class WeatherProvider extends ChangeNotifier {
     if (_telemetry == null || _airQuality == null) return;
     final t = _telemetry!;
     final a = _airQuality!;
-    final waves = _marineData?.waveHeight ?? 1.2;
 
+    // 1. Establish persona targeted advisory summary & action bullet
     switch (_activePersona) {
       case PersonaType.health:
         final aqiLabel = a.aqi <= 50 ? 'Good' : (a.aqi <= 100 ? 'Moderate' : 'Unhealthy');
         _advisorySummary = '✓ AQI is ${aqiLabel.toLowerCase()} today (${a.aqi}). UV is high (${t.uvIndex.round()}) — wear sunscreen and sunglasses. Pollen is low, great for outdoor walks.';
         _actionBullet = 'Wear SPF 30+ and UV-blocking eyewear during midday hours.';
-
-        _personaSlots = [
-          PersonaSlotData(slotIndex: 1, title: 'AQI', value: '${a.aqi} $aqiLabel', subtitle: 'PM2.5 ${a.pm2_5.toStringAsFixed(1)} µg/m³', status: aqiLabel, icon: Icons.air_rounded, color: a.aqi <= 50 ? const Color(0xFF10B981) : const Color(0xFFF59E0B), progressPercentage: (a.aqi / 200.0).clamp(0.0, 1.0)),
-          PersonaSlotData(slotIndex: 2, title: 'Pollen (Grass)', value: '${a.grassPollen < 10 ? 'Low' : 'Moderate'} ${a.grassPollen.round()}', subtitle: 'grains/m³', status: 'Low', icon: Icons.grass_rounded, color: const Color(0xFF10B981), progressPercentage: (a.grassPollen / 30.0).clamp(0.0, 1.0)),
-          PersonaSlotData(slotIndex: 3, title: 'Pollen (Tree)', value: '${(a.alderPollen + a.birchPollen) < 15 ? 'Low' : 'Moderate'} ${(a.alderPollen + a.birchPollen).round()}', subtitle: 'grains/m³', status: 'Moderate', icon: Icons.park_rounded, color: const Color(0xFFF59E0B), progressPercentage: 0.45),
-          PersonaSlotData(slotIndex: 4, title: 'UV Index', value: '${t.uvIndex.round()} High', subtitle: 'SPF 30+ needed', status: 'High', icon: Icons.wb_sunny_rounded, color: const Color(0xFFF59E0B), progressPercentage: (t.uvIndex / 12.0).clamp(0.0, 1.0)),
-          PersonaSlotData(slotIndex: 5, title: 'Humidity', value: '${t.humidity}%', subtitle: 'Mold Risk: $_moldRisk', status: 'Moderate', icon: Icons.water_drop_rounded, color: const Color(0xFF06B6D4), progressPercentage: t.humidity / 100.0),
-          PersonaSlotData(slotIndex: 6, title: 'Air Quality', value: aqiLabel, subtitle: 'Safe for outdoor exercise', status: aqiLabel, icon: Icons.health_and_safety_rounded, color: const Color(0xFF10B981), progressPercentage: 0.85),
-        ];
         break;
-
       case PersonaType.fitness:
         _advisorySummary = '🏃 Workout Safety Score is $_workoutScore/100. Optimal training window is $_optimalRunningWindow with lowest heat index and clean air.';
         _actionBullet = 'Plan workout session during $_optimalRunningWindow.';
-
-        _personaSlots = [
-          PersonaSlotData(slotIndex: 1, title: 'Workout Safety', value: '$_workoutScore/100', subtitle: _workoutScore >= 75 ? 'Safe for High Intensity' : 'Moderate Heat Stress', status: 'Good', icon: Icons.fitness_center_rounded, color: const Color(0xFF8B5CF6), progressPercentage: _workoutScore / 100.0),
-          PersonaSlotData(slotIndex: 2, title: 'Best Run Window', value: _optimalRunningWindow, subtitle: 'Optimal temperature & air', status: 'Optimal', icon: Icons.timer_rounded, color: const Color(0xFF06B6D4), progressPercentage: 0.85),
-          PersonaSlotData(slotIndex: 3, title: 'Temperature', value: '${t.currentTemperature.round()}°C', subtitle: 'Feels like ${t.apparentTemperature.round()}°C', status: 'Moderate', icon: Icons.thermostat_rounded, color: const Color(0xFFF59E0B), progressPercentage: (t.currentTemperature / 45.0).clamp(0.0, 1.0)),
-          PersonaSlotData(slotIndex: 4, title: 'Heat Hydration', value: '500ml/hr', subtitle: 'Humidity at ${t.humidity}%', status: 'Moderate', icon: Icons.local_drink_rounded, color: const Color(0xFF06B6D4), progressPercentage: t.humidity / 100.0),
-          PersonaSlotData(slotIndex: 5, title: 'Wind Resistance', value: '${t.windSpeed.round()} km/h', subtitle: 'From ${t.windDirectionCardinal}', status: 'Good', icon: Icons.air_rounded, color: const Color(0xFF10B981), progressPercentage: (t.windSpeed / 40.0).clamp(0.0, 1.0)),
-          PersonaSlotData(slotIndex: 6, title: 'Rain Chance', value: '${t.precipitation > 0 ? 60 : 10}%', subtitle: 'Pavement traction dry', status: 'Good', icon: Icons.umbrella_rounded, color: const Color(0xFF06B6D4), progressPercentage: 0.15),
-        ];
         break;
-
       case PersonaType.farm:
         _advisorySummary = '🌱 $_irrigationAdvice. Soil moisture (0-7cm) is ${t.soilMoisture.toStringAsFixed(2)} m³/m³ with ET deficit of ${_agDeficit.toStringAsFixed(1)} mm.';
         _actionBullet = 'Execute micro-irrigation schedule if deficit exceeds 3.5mm.';
-
-        _personaSlots = [
-          PersonaSlotData(slotIndex: 1, title: 'Irrigation Advice', value: _irrigationAdvice.split('—')[0].trim(), subtitle: 'Deficit ${_agDeficit.toStringAsFixed(1)} mm', status: 'Optimal', icon: Icons.water_rounded, color: const Color(0xFF10B981), progressPercentage: 0.8),
-          PersonaSlotData(slotIndex: 2, title: 'Soil Moisture (0-7cm)', value: '${t.soilMoisture.toStringAsFixed(2)} m³/m³', subtitle: 'Optimal range 0.22 - 0.35', status: t.soilMoisture >= 0.22 ? 'Optimal' : 'Low', icon: Icons.grass_rounded, color: const Color(0xFF10B981), progressPercentage: (t.soilMoisture / 0.4).clamp(0.0, 1.0)),
-          PersonaSlotData(slotIndex: 3, title: 'Fungal / Mold Risk', value: _moldRisk, subtitle: 'Hum ${t.humidity}%, ${t.currentTemperature.round()}°C', status: _moldRisk, icon: Icons.coronavirus_rounded, color: _moldRisk == 'High' ? const Color(0xFFEF4444) : const Color(0xFF10B981), progressPercentage: _moldRisk == 'High' ? 0.85 : 0.25),
-          PersonaSlotData(slotIndex: 4, title: 'Spray Conditions', value: t.windSpeed < 15 ? 'Favorable' : 'Unfavorable', subtitle: 'Wind at ${t.windSpeed.round()} km/h', status: 'Good', icon: Icons.science_rounded, color: const Color(0xFF10B981), progressPercentage: 0.75),
-          PersonaSlotData(slotIndex: 5, title: 'Rain Probability', value: '${t.precipitation > 0 ? 60 : 15}%', subtitle: 'Next 24 Hours', status: 'Good', icon: Icons.cloud_rounded, color: const Color(0xFF06B6D4), progressPercentage: 0.2),
-          PersonaSlotData(slotIndex: 6, title: 'Gust Hazard', value: '${t.windGusts.round()} km/h', subtitle: 'Safe against lodging', status: 'Good', icon: Icons.air_rounded, color: const Color(0xFF10B981), progressPercentage: (t.windGusts / 60.0).clamp(0.0, 1.0)),
-        ];
         break;
-
       case PersonaType.beach:
+        final waves = _marineData?.waveHeight ?? 1.2;
         _advisorySummary = '🌊 Wave height is currently ${waves.toStringAsFixed(1)}m. UV Index is high (${t.uvIndex.round()}) — apply water-resistant SPF 50+ sunscreen.';
         _actionBullet = 'Great conditions for beach strolls and water activities.';
-
-        _personaSlots = [
-          PersonaSlotData(slotIndex: 1, title: 'Wave Height', value: '${waves.toStringAsFixed(1)}m', subtitle: 'Moderate clean swell', status: 'Good', icon: Icons.waves_rounded, color: const Color(0xFF06B6D4), progressPercentage: 0.6),
-          PersonaSlotData(slotIndex: 2, title: 'UV Index', value: '${t.uvIndex.round()} High', subtitle: 'SPF 50+ needed', status: 'High', icon: Icons.wb_sunny_rounded, color: const Color(0xFFF59E0B), progressPercentage: (t.uvIndex / 12.0).clamp(0.0, 1.0)),
-          PersonaSlotData(slotIndex: 3, title: 'Surf Wind', value: '${t.windSpeed.round()} km/h ${t.windDirectionCardinal}', subtitle: 'Offshore breeze', status: 'Optimal', icon: Icons.air_rounded, color: const Color(0xFF10B981), progressPercentage: 0.5),
-          PersonaSlotData(slotIndex: 4, title: 'Water Temp', value: '${(t.currentTemperature - 3).round()}°C', subtitle: 'Pleasant swim temperature', status: 'Good', icon: Icons.pool_rounded, color: const Color(0xFF06B6D4), progressPercentage: 0.7),
-          PersonaSlotData(slotIndex: 5, title: 'Tide Status', value: 'Mid Tide', subtitle: 'High Tide at 16:20', status: 'Good', icon: Icons.water_rounded, color: const Color(0xFF06B6D4), progressPercentage: 0.5),
-          PersonaSlotData(slotIndex: 6, title: 'Swim Safety', value: 'Green Flag', subtitle: 'Calm nearshore currents', status: 'Optimal', icon: Icons.verified_rounded, color: const Color(0xFF10B981), progressPercentage: 0.9),
-        ];
         break;
-
       case PersonaType.commute:
         _advisorySummary = '🚗 Commute Hazard Rating: $_commuteHazard/100 ($_commuteCondition). Road traction is firm with excellent visibility.';
         _actionBullet = 'Normal cruising speed recommended along main highway routes.';
-
-        _personaSlots = [
-          PersonaSlotData(slotIndex: 1, title: 'Commute Hazard', value: '$_commuteHazard/100', subtitle: _commuteCondition, status: 'Good', icon: Icons.traffic_rounded, color: _commuteHazard < 30 ? const Color(0xFF10B981) : const Color(0xFFEF4444), progressPercentage: _commuteHazard / 100.0),
-          PersonaSlotData(slotIndex: 2, title: 'Road Visibility', value: '> 8 km', subtitle: 'Zero fog disruption', status: 'Optimal', icon: Icons.visibility_rounded, color: const Color(0xFF10B981), progressPercentage: 0.9),
-          PersonaSlotData(slotIndex: 3, title: 'Rain Slip Risk', value: 'Low', subtitle: 'Dry road surfaces', status: 'Good', icon: Icons.water_drop_rounded, color: const Color(0xFF10B981), progressPercentage: 0.1),
-          PersonaSlotData(slotIndex: 4, title: 'Crosswind Gusts', value: '${t.windGusts.round()} km/h', subtitle: 'Stable highway drive', status: 'Good', icon: Icons.air_rounded, color: const Color(0xFF10B981), progressPercentage: (t.windGusts / 60.0).clamp(0.0, 1.0)),
-          PersonaSlotData(slotIndex: 5, title: 'Cabin Climate', value: '${t.currentTemperature.round()}°C', subtitle: 'AC Eco Mode recommended', status: 'Moderate', icon: Icons.ac_unit_rounded, color: const Color(0xFF06B6D4), progressPercentage: 0.6),
-          PersonaSlotData(slotIndex: 6, title: 'Transit Reliability', value: '98% High', subtitle: 'On-schedule traffic', status: 'Optimal', icon: Icons.schedule_rounded, color: const Color(0xFF10B981), progressPercentage: 0.95),
-        ];
         break;
-
       case PersonaType.travel:
         _advisorySummary = '✈️ Excellent travel and destination conditions with ${t.currentTemperature.round()}°C and gentle breeze. Carry lightweight layers for evening.';
         _actionBullet = 'Keep boarding alert notifications on; clear flight routes expected.';
-
-        _personaSlots = [
-          PersonaSlotData(slotIndex: 1, title: 'Sightseeing Index', value: '9/10 Excellent', subtitle: 'Clear daylight visibility', status: 'Optimal', icon: Icons.explore_rounded, color: const Color(0xFF10B981), progressPercentage: 0.9),
-          PersonaSlotData(slotIndex: 2, title: 'Packing Advice', value: 'Light Cotton + SPF', subtitle: 'UV ${t.uvIndex.round()} High', status: 'Good', icon: Icons.luggage_rounded, color: const Color(0xFF06B6D4), progressPercentage: 0.8),
-          PersonaSlotData(slotIndex: 3, title: 'Flight Comfort', value: 'Smooth', subtitle: 'Low wind shear aloft', status: 'Optimal', icon: Icons.flight_takeoff_rounded, color: const Color(0xFF10B981), progressPercentage: 0.95),
-          PersonaSlotData(slotIndex: 4, title: 'Evening Temp', value: '${(t.currentTemperature - 4).round()}°C', subtitle: 'Comfortable night outing', status: 'Good', icon: Icons.nightlight_rounded, color: const Color(0xFF8B5CF6), progressPercentage: 0.75),
-          PersonaSlotData(slotIndex: 5, title: 'Rain Chance', value: '10% Low', subtitle: 'No cancellations', status: 'Good', icon: Icons.umbrella_rounded, color: const Color(0xFF06B6D4), progressPercentage: 0.1),
-          PersonaSlotData(slotIndex: 6, title: 'Air Quality', value: 'AQI ${a.aqi}', subtitle: 'Healthy for touring', status: 'Good', icon: Icons.air_rounded, color: const Color(0xFF10B981), progressPercentage: 0.85),
-        ];
         break;
-
       case PersonaType.events:
         _advisorySummary = '🎪 Outdoor event feasibility is 88%. Weather stability is high with minimal rain probability and moderate breeze.';
         _actionBullet = 'Setup shade canopies to protect guests during peak UV hours.';
-
-        _personaSlots = [
-          PersonaSlotData(slotIndex: 1, title: 'Event Feasibility', value: '88% High', subtitle: 'Low disruption probability', status: 'Optimal', icon: Icons.celebration_rounded, color: const Color(0xFF10B981), progressPercentage: 0.88),
-          PersonaSlotData(slotIndex: 2, title: 'Canopy Gust Load', value: '${t.windGusts.round()} km/h', subtitle: 'Safe anchor conditions', status: 'Good', icon: Icons.air_rounded, color: const Color(0xFF10B981), progressPercentage: (t.windGusts / 50.0).clamp(0.0, 1.0)),
-          PersonaSlotData(slotIndex: 3, title: 'Guest Thermal Index', value: '${t.apparentTemperature.round()}°C Feels', subtitle: 'Provide shaded seating', status: 'Moderate', icon: Icons.thermostat_rounded, color: const Color(0xFFF59E0B), progressPercentage: (t.apparentTemperature / 45.0).clamp(0.0, 1.0)),
-          PersonaSlotData(slotIndex: 4, title: 'Rain Disruption', value: '10% Chance', subtitle: 'Dry stage conditions', status: 'Good', icon: Icons.cloud_rounded, color: const Color(0xFF06B6D4), progressPercentage: 0.1),
-          PersonaSlotData(slotIndex: 5, title: 'Golden Hour', value: '6:15 PM', subtitle: 'Ideal photography window', status: 'Optimal', icon: Icons.wb_twilight_rounded, color: const Color(0xFFF59E0B), progressPercentage: 0.8),
-          PersonaSlotData(slotIndex: 6, title: 'Acoustic Impact', value: 'Low Wind Noise', subtitle: 'Clean outdoor audio', status: 'Good', icon: Icons.volume_up_rounded, color: const Color(0xFF10B981), progressPercentage: 0.7),
-        ];
         break;
-
       case PersonaType.family:
         _advisorySummary = '👨‍👩‍👧 Air quality is clean (AQI ${a.aqi}) and temperature is comfortable. Great morning for school recess and park playtime.';
         _actionBullet = 'Pack full water bottles and apply sunscreen before school.';
-
-        _personaSlots = [
-          PersonaSlotData(slotIndex: 1, title: 'Outdoor Play', value: 'Approved', subtitle: 'Safe air & mild weather', status: 'Optimal', icon: Icons.sports_handball_rounded, color: const Color(0xFF10B981), progressPercentage: 0.9),
-          PersonaSlotData(slotIndex: 2, title: 'School Commute', value: 'Smooth', subtitle: 'Clear roads & transit', status: 'Optimal', icon: Icons.directions_bus_rounded, color: const Color(0xFF10B981), progressPercentage: 0.95),
-          PersonaSlotData(slotIndex: 3, title: 'Hydration Need', value: 'High', subtitle: 'Pack 750ml water bottle', status: 'Moderate', icon: Icons.local_drink_rounded, color: const Color(0xFF06B6D4), progressPercentage: 0.7),
-          PersonaSlotData(slotIndex: 4, title: 'UV Protection', value: 'UV ${t.uvIndex.round()} High', subtitle: 'Hats & SPF recommended', status: 'High', icon: Icons.wb_sunny_rounded, color: const Color(0xFFF59E0B), progressPercentage: (t.uvIndex / 12.0).clamp(0.0, 1.0)),
-          PersonaSlotData(slotIndex: 5, title: 'Allergy Trigger', value: 'Low', subtitle: 'Grass pollen minimal', status: 'Good', icon: Icons.masks_rounded, color: const Color(0xFF10B981), progressPercentage: 0.8),
-          PersonaSlotData(slotIndex: 6, title: 'Indoor Sleep Temp', value: '${(t.currentTemperature - 3).round()}°C', subtitle: 'Comfortable night cooling', status: 'Good', icon: Icons.bedtime_rounded, color: const Color(0xFF8B5CF6), progressPercentage: 0.85),
-        ];
         break;
-
       case PersonaType.work:
         _advisorySummary = '👷 Heat index feels like ${t.apparentTemperature.round()}°C. Mandatory 10-minute shade and water rest intervals required every 50 minutes.';
         _actionBullet = 'Wear breathable high-vis gear and safety helmet sun shields.';
-
-        _personaSlots = [
-          PersonaSlotData(slotIndex: 1, title: 'Heat Stress Index', value: '${t.apparentTemperature.round()}°C Feels', subtitle: 'Stage 1 Precaution Active', status: 'Moderate', icon: Icons.warning_rounded, color: const Color(0xFFF59E0B), progressPercentage: (t.apparentTemperature / 45.0).clamp(0.0, 1.0)),
-          PersonaSlotData(slotIndex: 2, title: 'Rest Cycle', value: '10m per 50m', subtitle: 'Mandatory hydration', status: 'Moderate', icon: Icons.timer_rounded, color: const Color(0xFF06B6D4), progressPercentage: 0.6),
-          PersonaSlotData(slotIndex: 3, title: 'Scaffold Wind', value: '${t.windGusts.round()} km/h', subtitle: 'Safe under 45 km/h', status: 'Good', icon: Icons.precision_manufacturing_rounded, color: const Color(0xFF10B981), progressPercentage: (t.windGusts / 60.0).clamp(0.0, 1.0)),
-          PersonaSlotData(slotIndex: 4, title: 'Lightning Risk', value: '0% None', subtitle: 'Safe for crane & steel', status: 'Optimal', icon: Icons.flash_on_rounded, color: const Color(0xFF10B981), progressPercentage: 0.95),
-          PersonaSlotData(slotIndex: 5, title: 'Dust Exposure', value: '${a.pm10.round()} µg/m³', subtitle: 'Wear particulate mask', status: 'Good', icon: Icons.masks_rounded, color: const Color(0xFF10B981), progressPercentage: (a.pm10 / 100.0).clamp(0.0, 1.0)),
-          PersonaSlotData(slotIndex: 6, title: 'Site Status', value: 'Green Status', subtitle: 'Full shift approved', status: 'Optimal', icon: Icons.verified_user_rounded, color: const Color(0xFF10B981), progressPercentage: 0.9),
-        ];
         break;
+    }
+
+    // 2. Build custom/active parameter slots dynamically
+    if (_activeParameterIds.isEmpty) {
+      _activeParameterIds = _getDefaultParameterIdsForPersona(_activePersona);
+    }
+
+    _personaSlots = [];
+    for (int i = 0; i < _activeParameterIds.length; i++) {
+      final pid = _activeParameterIds[i];
+      final def = WeatherParameterDefinition.allParameters.firstWhere(
+        (p) => p.id == pid,
+        orElse: () => WeatherParameterDefinition(
+          id: pid,
+          title: pid,
+          shortTitle: pid,
+          description: '',
+          category: ParameterCategory.lifestyle,
+          icon: Icons.insights_rounded,
+          defaultColor: AppColors.primary,
+        ),
+      );
+
+      _personaSlots.add(def.extractSlotData(
+        slotIndex: i + 1,
+        telemetry: t,
+        airQuality: a,
+        marineData: _marineData,
+        workoutScore: _workoutScore,
+        optimalRunWindow: _optimalRunningWindow,
+        moldRisk: _moldRisk,
+        irrigationAdvice: _irrigationAdvice,
+        agDeficit: _agDeficit,
+        commuteHazard: _commuteHazard,
+        commuteCondition: _commuteCondition,
+        tempUnit: _tempUnit,
+        windUnit: _windUnit,
+      ));
     }
   }
 

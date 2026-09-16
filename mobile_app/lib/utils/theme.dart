@@ -62,16 +62,44 @@ class AppColors {
 
 class AppTypography {
   static const TextStyle displayTemp = TextStyle(
-    fontSize: 88,
+    fontSize: 92,
     fontWeight: FontWeight.w200,
-    letterSpacing: -2.5,
+    letterSpacing: -3.0,
     color: Colors.white,
     height: 1.0,
     shadows: [
       Shadow(
         color: Color(0x33000000),
-        blurRadius: 16,
+        blurRadius: 18,
         offset: Offset(0, 4),
+      ),
+    ],
+  );
+
+  static const TextStyle heroCity = TextStyle(
+    fontSize: 15,
+    fontWeight: FontWeight.w600,
+    letterSpacing: -0.2,
+    color: Colors.white,
+    shadows: [
+      Shadow(
+        color: Color(0x33000000),
+        blurRadius: 8,
+        offset: Offset(0, 1),
+      ),
+    ],
+  );
+
+  static const TextStyle heroCondition = TextStyle(
+    fontSize: 16,
+    fontWeight: FontWeight.w500,
+    letterSpacing: 0.2,
+    color: Color(0xFFF1F5F9),
+    shadows: [
+      Shadow(
+        color: Color(0x33000000),
+        blurRadius: 8,
+        offset: Offset(0, 2),
       ),
     ],
   );

@@ -1,7 +1,13 @@
 import os
 from typing import Dict, Any, Optional, List
 from dotenv import load_dotenv
-from ..models.schemas import PersonaType, AdvisorChatResponse
+try:
+    from backend.models.schemas import PersonaType, AdvisorChatResponse
+except ImportError:
+    try:
+        from ..models.schemas import PersonaType, AdvisorChatResponse
+    except (ImportError, ValueError):
+        from models.schemas import PersonaType, AdvisorChatResponse
 
 load_dotenv()
 

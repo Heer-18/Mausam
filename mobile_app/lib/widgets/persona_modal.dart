@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/persona_type.dart';
@@ -23,16 +22,21 @@ class _PersonaModalState extends State<PersonaModal> {
 
   @override
   Widget build(BuildContext context) {
-    return BackdropFilter(
-      filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-      child: Container(
-        height: MediaQuery.of(context).size.height * 0.88,
-        decoration: BoxDecoration(
-          color: AppColors.surface.withOpacity(0.92),
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-          border: Border.all(color: Colors.white.withOpacity(0.12), width: 1),
-        ),
-        child: Column(
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.88,
+      decoration: BoxDecoration(
+        color: const Color(0xF80F172A),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        border: Border.all(color: Colors.white.withOpacity(0.12), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.55),
+            blurRadius: 30,
+            offset: const Offset(0, -6),
+          ),
+        ],
+      ),
+      child: Column(
           children: [
             // Top Drag Handle & Close Row
             Padding(
@@ -234,7 +238,6 @@ class _PersonaModalState extends State<PersonaModal> {
             ),
           ],
         ),
-      ),
-    );
+      );
   }
 }

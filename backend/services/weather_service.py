@@ -1,20 +1,52 @@
 import httpx
 from typing import Dict, Any, List, Optional, Tuple
 from datetime import datetime
-from ..models.schemas import (
-    PersonaType,
-    WeatherTelemetry,
-    DerivedScores,
-    Tier1Alert,
-    PersonaSlotMetric,
-    Tier2PersonaInsights,
-    HourlyForecastItem,
-    DailyForecastItem,
-    Tier3Baseline,
-    ComprehensiveWeatherResponse,
-    CityGeocodingResult,
-)
-from .math_engine import MathEngine
+try:
+    from backend.models.schemas import (
+        PersonaType,
+        WeatherTelemetry,
+        DerivedScores,
+        Tier1Alert,
+        PersonaSlotMetric,
+        Tier2PersonaInsights,
+        HourlyForecastItem,
+        DailyForecastItem,
+        Tier3Baseline,
+        ComprehensiveWeatherResponse,
+        CityGeocodingResult,
+    )
+    from backend.services.math_engine import MathEngine
+except ImportError:
+    try:
+        from ..models.schemas import (
+            PersonaType,
+            WeatherTelemetry,
+            DerivedScores,
+            Tier1Alert,
+            PersonaSlotMetric,
+            Tier2PersonaInsights,
+            HourlyForecastItem,
+            DailyForecastItem,
+            Tier3Baseline,
+            ComprehensiveWeatherResponse,
+            CityGeocodingResult,
+        )
+        from .math_engine import MathEngine
+    except (ImportError, ValueError):
+        from models.schemas import (
+            PersonaType,
+            WeatherTelemetry,
+            DerivedScores,
+            Tier1Alert,
+            PersonaSlotMetric,
+            Tier2PersonaInsights,
+            HourlyForecastItem,
+            DailyForecastItem,
+            Tier3Baseline,
+            ComprehensiveWeatherResponse,
+            CityGeocodingResult,
+        )
+        from math_engine import MathEngine
 
 class OpenMeteoService:
     BASE_FORECAST_URL = "https://api.open-meteo.com/v1/forecast"

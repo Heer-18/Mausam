@@ -4,15 +4,37 @@ from fastapi import FastAPI, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
-from .models.schemas import (
-    PersonaType,
-    ComprehensiveWeatherResponse,
-    AdvisorChatRequest,
-    AdvisorChatResponse,
-    CityGeocodingResult
-)
-from .services.weather_service import OpenMeteoService
-from .services.gemini_service import GeminiAdvisorService
+try:
+    from backend.models.schemas import (
+        PersonaType,
+        ComprehensiveWeatherResponse,
+        AdvisorChatRequest,
+        AdvisorChatResponse,
+        CityGeocodingResult
+    )
+    from backend.services.weather_service import OpenMeteoService
+    from backend.services.gemini_service import GeminiAdvisorService
+except ImportError:
+    try:
+        from .models.schemas import (
+            PersonaType,
+            ComprehensiveWeatherResponse,
+            AdvisorChatRequest,
+            AdvisorChatResponse,
+            CityGeocodingResult
+        )
+        from .services.weather_service import OpenMeteoService
+        from .services.gemini_service import GeminiAdvisorService
+    except (ImportError, ValueError):
+        from models.schemas import (
+            PersonaType,
+            ComprehensiveWeatherResponse,
+            AdvisorChatRequest,
+            AdvisorChatResponse,
+            CityGeocodingResult
+        )
+        from services.weather_service import OpenMeteoService
+        from services.gemini_service import GeminiAdvisorService
 
 load_dotenv()
 

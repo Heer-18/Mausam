@@ -4,16 +4,38 @@ import '../models/persona_type.dart';
 import '../providers/weather_provider.dart';
 import '../utils/theme.dart';
 import '../widgets/alert_banner.dart';
+import '../widgets/atmospheric_hero_section.dart';
+import '../widgets/celestial_almanac_card.dart';
 import '../widgets/daily_forecast_widget.dart';
-import '../widgets/hero_weather_card.dart';
 import '../widgets/hourly_forecast_widget.dart';
 import '../widgets/location_search_modal.dart';
 import '../widgets/mini_metrics_grid.dart';
+import '../widgets/notifications_modal.dart';
+import '../widgets/persona_modal.dart';
 import '../widgets/personalized_insights_section.dart';
-import '../widgets/top_app_bar.dart';
+import '../widgets/settings_modal.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  late final ScrollController _scrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -40,16 +62,17 @@ class DashboardScreen extends StatelessWidget {
 
         final telemetry = provider.telemetry;
         final airQuality = provider.airQuality;
+        final topPadding = MediaQuery.of(context).padding.top;
 
         return Scaffold(
           backgroundColor: Colors.transparent,
-          appBar: const MausamTopAppBar(),
           body: RefreshIndicator(
             color: AppColors.primary,
             backgroundColor: AppColors.surfaceContainer,
             onRefresh: () => provider.fetchWeatherData(isRefresh: true),
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 80.0),
+              controller: _scrollController,
+              padding: EdgeInsets.fromLTRB(16.0, topPadding + 6.0, 16.0, 80.0),
               children: [
                 // First-time Location Prompt Banner if needed
                 if (provider.needsLocationSelection)
@@ -115,49 +138,115 @@ class DashboardScreen extends StatelessWidget {
                   ),
                 ],
 
-                // Hero Weather Card
+                // Atmospheric Borderless Hero Section with Moving Cloud Overlap & Status Pills
                 if (telemetry != null)
-                  HeroWeatherCard(
+                  AtmosphericHeroSection(
                     telemetry: telemetry,
-                    statusChipText: provider.activePersona == PersonaType.fitness
+                    airQuality: airQuality,
+                    dailyList: provider.dailyForecast,
+                    activePersona: provider.activePersona,
+                    cityName: provider.cityName,
+                    alertCount: provider.alerts.length,
+                    personaChipText: provider.activePersona == PersonaType.fitness
                         ? 'Best Run: ${provider.optimalRunningWindow}'
                         : (provider.activePersona == PersonaType.farm
                             ? provider.irrigationAdvice.split('—')[0].trim()
                             : (provider.alerts.isNotEmpty
                                 ? provider.alerts.first.title
                                 : 'Forecast Optimal')),
-                    statusChipIcon: provider.activePersona == PersonaType.fitness
+                    personaChipIcon: provider.activePersona == PersonaType.fitness
                         ? Icons.directions_run_rounded
                         : (provider.activePersona == PersonaType.farm
                             ? Icons.eco_rounded
                             : Icons.check_circle_outline_rounded),
-                    statusChipColor: provider.activePersona.accentColor,
+                    personaChipColor: provider.activePersona.accentColor,
+                    onLocationTap: () {
+                      showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        builder: (context) => const LocationSearchModal(),
+                      );
+                    },
+                    onSearchTap: () {
+                      showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        builder: (context) => const LocationSearchModal(),
+                      );
+                    },
+                    onNotificationsTap: () {
+                      showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        builder: (context) => const NotificationsModal(),
+                      );
+                    },
+                    onSettingsTap: () {
+                      showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        builder: (context) => const SettingsModal(),
+                      );
+                    },
+                    onPersonaTap: () {
+                      showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        builder: (context) => const PersonaModal(),
+                      );
+                    },
                   ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 18),
 
                 // 4 Mini-Cards Grid (AQI, UV, Humidity, Wind)
-                if (telemetry != null && airQuality != null)
+                if (provider.showMiniMetrics && telemetry != null && airQuality != null) ...[
                   MiniMetricsGrid(
                     telemetry: telemetry,
                     airQuality: airQuality,
                   ),
-                const SizedBox(height: 16),
+                  const SizedBox(height: 16),
+                ],
 
-                // Tier 2 Personalized Insights Section
-                PersonalizedInsightsSection(
-                  persona: provider.activePersona,
-                  slots: provider.personaSlots,
-                  advisorySummary: provider.advisorySummary,
-                  actionBullet: provider.actionBullet,
-                ),
-                const SizedBox(height: 24),
+                // Tier 2 Personalized Insights Section (With Scroll-Driven Dynamic Parameter Animations)
+                if (provider.showPersonalizedInsights) ...[
+                  PersonalizedInsightsSection(
+                    persona: provider.activePersona,
+                    slots: provider.personaSlots,
+                    advisorySummary: provider.advisorySummary,
+                    actionBullet: provider.actionBullet,
+                    scrollController: _scrollController,
+                  ),
+                  const SizedBox(height: 20),
+                ],
 
                 // Tier 3 Baseline: 24-Hour Hourly Forecast
-                HourlyForecastWidget(hourlyList: provider.hourlyForecast),
-                const SizedBox(height: 24),
+                if (provider.showHourlyForecast) ...[
+                  HourlyForecastWidget(hourlyList: provider.hourlyForecast),
+                  const SizedBox(height: 20),
+                ],
 
                 // Tier 3 Baseline: 7-Day Daily Forecast List
-                DailyForecastWidget(dailyList: provider.dailyForecast),
+                if (provider.showDailyForecast) ...[
+                  DailyForecastWidget(
+                    dailyList: provider.dailyForecast,
+                    currentTemperature: telemetry?.currentTemperature,
+                  ),
+                  const SizedBox(height: 20),
+                ],
+
+                // Celestial Almanac & Moon Phase Card
+                if (provider.showCelestialAlmanac) ...[
+                  CelestialAlmanacCard(
+                    telemetry: telemetry,
+                    todayForecast: provider.dailyForecast.isNotEmpty ? provider.dailyForecast.first : null,
+                  ),
+                  const SizedBox(height: 10),
+                ],
               ],
             ),
           ),

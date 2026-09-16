@@ -11,6 +11,31 @@ class CacheService {
   static const String keyChatSessions = 'mausam_chat_sessions_v1';
   static const String keyActiveSessionId = 'mausam_active_session_id';
 
+  // Homescreen Section Customization Keys
+  static const String keyShowMiniMetrics = 'mausam_show_mini_metrics';
+  static const String keyShowPersonalizedInsights = 'mausam_show_insights';
+  static const String keyShowHourlyForecast = 'mausam_show_hourly';
+  static const String keyShowDailyForecast = 'mausam_show_daily';
+  static const String keyShowCelestialAlmanac = 'mausam_show_celestial';
+
+  // Units & Formats Keys
+  static const String keyTemperatureUnit = 'mausam_temp_unit'; // 'C' or 'F'
+  static const String keyWindSpeedUnit = 'mausam_wind_unit'; // 'km/h', 'mph', 'm/s'
+
+  // Notification Automation Keys
+  static const String keyAutoNotifications = 'mausam_auto_notifications';
+  static const String keyWittyAlerts = 'mausam_witty_alerts';
+  static const String keyMorningBriefing = 'mausam_morning_briefing';
+  static const String keyLastWittyAlertTime = 'mausam_last_witty_alert_time';
+  static const String keyLastMorningDate = 'mausam_last_morning_date';
+
+  // Dynamic Icon Theme
+  static const String keyDynamicIconTheme = 'mausam_dynamic_icon_theme'; // 'auto', 'default', 'sunny', 'rainy', 'cloudy', 'night'
+
+  // Custom Selected Parameters Key
+  static const String keyCustomParameterIds = 'mausam_custom_param_ids';
+  static String getPersonaCustomParamsKey(String personaName) => 'mausam_params_$personaName';
+
   static const int cacheValidityMinutes = 15;
 
   /// Cache weather data with current timestamp
@@ -157,5 +182,49 @@ class CacheService {
     } catch (_) {
       return null;
     }
+  }
+
+  // =========================================================================
+  // HOMESCREEN CUSTOMIZATION & SETTINGS PERSISTENCE
+  // =========================================================================
+
+  static Future<void> saveBool(String key, bool val) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(key, val);
+  }
+
+  static Future<bool> getBool(String key, {bool defaultValue = true}) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(key) ?? defaultValue;
+  }
+
+  static Future<void> saveString(String key, String val) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(key, val);
+  }
+
+  static Future<String> getString(String key, {String defaultValue = ''}) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(key) ?? defaultValue;
+  }
+
+  static Future<void> saveInt(String key, int val) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(key, val);
+  }
+
+  static Future<int> getInt(String key, {int defaultValue = 0}) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(key) ?? defaultValue;
+  }
+
+  static Future<void> saveStringList(String key, List<String> list) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(key, list);
+  }
+
+  static Future<List<String>?> getStringList(String key) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getStringList(key);
   }
 }

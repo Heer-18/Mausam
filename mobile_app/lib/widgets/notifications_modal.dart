@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/weather_models.dart';
@@ -18,32 +17,30 @@ class NotificationsModal extends StatelessWidget {
         final airQuality = provider.airQuality;
         final persona = provider.activePersona;
 
-        return BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-          child: Container(
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.height * 0.85,
+        return Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.88,
+          ),
+          decoration: BoxDecoration(
+            color: const Color(0xF80F172A),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+            border: Border.all(
+              color: Colors.white.withOpacity(0.12),
+              width: 1,
             ),
-            decoration: BoxDecoration(
-              color: const Color(0xFF0F172A).withOpacity(0.96),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-              border: Border.all(
-                color: Colors.white.withOpacity(0.12),
-                width: 1,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.55),
+                blurRadius: 30,
+                offset: const Offset(0, -6),
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.5),
-                  blurRadius: 30,
-                  offset: const Offset(0, -6),
-                ),
-              ],
-            ),
-            child: SafeArea(
-              top: false,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
+            ],
+          ),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
                   // 1. Drag Handle
                   Center(
                     child: Container(
@@ -169,72 +166,29 @@ class NotificationsModal extends StatelessWidget {
                                   height: 1.35,
                                 ),
                               ),
-                              const SizedBox(height: 12),
-                              Row(
-                                children: [
-                                  // Test Weather Alert Button
-                                  Expanded(
-                                    child: ElevatedButton.icon(
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: AppColors.alertRed.withOpacity(0.2),
-                                        foregroundColor: AppColors.alertRed,
-                                        side: BorderSide(color: AppColors.alertRed.withOpacity(0.4)),
-                                        padding: const EdgeInsets.symmetric(vertical: 8),
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                        elevation: 0,
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: AppColors.agriEmerald.withOpacity(0.12),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: AppColors.agriEmerald.withOpacity(0.3)),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.bolt_rounded, size: 16, color: AppColors.agriEmerald),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        'Automated AI Alerts & Contextual Weather Tips Active',
+                                        style: AppTypography.labelCaps.copyWith(
+                                          fontSize: 10.5,
+                                          color: AppColors.agriEmerald,
+                                          fontWeight: FontWeight.w700,
+                                        ),
                                       ),
-                                      icon: const Icon(Icons.warning_rounded, size: 16),
-                                      label: const Text(
-                                        'Test Alert',
-                                        style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700),
-                                      ),
-                                      onPressed: () async {
-                                        await provider.sendTestAlertNotification();
-                                        if (context.mounted) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(
-                                              content: Text('🚨 Alert sent to Phone Notification Bar!'),
-                                              duration: Duration(seconds: 2),
-                                              behavior: SnackBarBehavior.floating,
-                                            ),
-                                          );
-                                        }
-                                      },
                                     ),
-                                  ),
-                                  const SizedBox(width: 10),
-
-                                  // Test AI Suggestion Button
-                                  Expanded(
-                                    child: ElevatedButton.icon(
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: AppColors.electricCyan.withOpacity(0.2),
-                                        foregroundColor: AppColors.electricCyan,
-                                        side: BorderSide(color: AppColors.electricCyan.withOpacity(0.4)),
-                                        padding: const EdgeInsets.symmetric(vertical: 8),
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                        elevation: 0,
-                                      ),
-                                      icon: const Icon(Icons.auto_awesome_rounded, size: 16),
-                                      label: const Text(
-                                        'Test Suggestion',
-                                        style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700),
-                                      ),
-                                      onPressed: () async {
-                                        await provider.sendTestSuggestionNotification();
-                                        if (context.mounted) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(
-                                              content: Text('💡 AI Suggestion sent to Phone Notification Bar!'),
-                                              duration: Duration(seconds: 2),
-                                              behavior: SnackBarBehavior.floating,
-                                            ),
-                                          );
-                                        }
-                                      },
-                                    ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ],
                           ),
@@ -337,10 +291,9 @@ class NotificationsModal extends StatelessWidget {
                 ],
               ),
             ),
-          ),
-        );
-      },
-    );
+          );
+        },
+      );
   }
 
   Widget _buildAllClearCard(String city) {

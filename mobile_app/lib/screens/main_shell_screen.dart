@@ -42,23 +42,9 @@ class _MainShellScreenState extends State<MainShellScreen> {
             backgroundColor: Colors.transparent,
             resizeToAvoidBottomInset: false,
             extendBody: true,
-            body: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 280),
-              switchInCurve: Curves.easeOutCubic,
-              switchOutCurve: Curves.easeInCubic,
-              transitionBuilder: (child, animation) {
-                return FadeTransition(
-                  opacity: CurvedAnimation(
-                    parent: animation,
-                    curve: const Interval(0.2, 1.0, curve: Curves.easeOut),
-                  ),
-                  child: child,
-                );
-              },
-              child: KeyedSubtree(
-                key: ValueKey<int>(_currentIndex),
-                child: _screens[_currentIndex],
-              ),
+            body: IndexedStack(
+              index: _currentIndex,
+              children: _screens,
             ),
             bottomNavigationBar: AnimatedSlide(
               duration: const Duration(milliseconds: 220),

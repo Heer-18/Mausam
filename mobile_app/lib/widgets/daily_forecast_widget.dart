@@ -6,10 +6,12 @@ import 'glass_container.dart';
 
 class DailyForecastWidget extends StatelessWidget {
   final List<DailyForecast> dailyList;
+  final double? currentTemperature;
 
   const DailyForecastWidget({
     super.key,
     required this.dailyList,
+    this.currentTemperature,
   });
 
   @override
@@ -70,16 +72,21 @@ class DailyForecastWidget extends StatelessWidget {
               final dayLabel = isToday ? 'Today' : (index == 1 ? 'Tomorrow' : item.dayName);
 
               // Normalize bar min and max positions
-              final double leftFactor = ((item.temperatureMin - globalMin) / rangeSpan).clamp(0.0, 0.9);
-              final double widthFactor = ((item.temperatureMax - item.temperatureMin) / rangeSpan).clamp(0.1, 1.0 - leftFactor);
+              final double leftFactor = ((item.temperatureMin - globalMin) / rangeSpan).clamp(0.0, 0.88);
+              final double widthFactor = ((item.temperatureMax - item.temperatureMin) / rangeSpan).clamp(0.12, 1.0 - leftFactor);
+
+              // Current temp dot factor for today
+              final double? currentFactor = (isToday && currentTemperature != null)
+                  ? ((currentTemperature! - globalMin) / rangeSpan).clamp(0.0, 1.0)
+                  : null;
 
               return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 9.0),
+                padding: const EdgeInsets.symmetric(vertical: 8.5),
                 child: Row(
                   children: [
                     // Day Name
                     SizedBox(
-                      width: 74,
+                      width: 76,
                       child: Text(
                         dayLabel,
                         style: AppTypography.bodyMd.copyWith(
@@ -91,9 +98,9 @@ class DailyForecastWidget extends StatelessWidget {
                       ),
                     ),
 
-                    // Condition Icon & Rain %
+                    // Condition Icon & Animated Rain %
                     SizedBox(
-                      width: 52,
+                      width: 50,
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -104,13 +111,23 @@ class DailyForecastWidget extends StatelessWidget {
                               child: FittedBox(
                                 fit: BoxFit.scaleDown,
                                 alignment: Alignment.centerLeft,
-                                child: Text(
-                                  '${item.precipitationProbabilityMax}%',
-                                  style: AppTypography.labelCaps.copyWith(
-                                    fontSize: 9,
-                                    color: AppColors.electricCyan,
-                                    fontWeight: FontWeight.w700,
+                                child: TweenAnimationBuilder<double>(
+                                  tween: Tween<double>(
+                                    begin: 0,
+                                    end: item.precipitationProbabilityMax.toDouble(),
                                   ),
+                                  duration: const Duration(milliseconds: 900),
+                                  curve: Curves.easeOutCubic,
+                                  builder: (context, val, _) {
+                                    return Text(
+                                      '${val.round()}%',
+                                      style: AppTypography.labelCaps.copyWith(
+                                        fontSize: 9,
+                                        color: AppColors.electricCyan,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    );
+                                  },
                                 ),
                               ),
                             ),
@@ -118,55 +135,100 @@ class DailyForecastWidget extends StatelessWidget {
                         ],
                       ),
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 4),
 
-                    // Min Temp
+                    // Min Temp (Animated Counter)
                     SizedBox(
-                      width: 30,
-                      child: Text(
-                        '${item.temperatureMin.round()}°',
-                        style: AppTypography.dataMono.copyWith(
-                          fontSize: 14,
-                          color: const Color(0xFF94A3B8),
-                          fontWeight: FontWeight.w500,
-                        ),
-                        textAlign: TextAlign.right,
+                      width: 28,
+                      child: TweenAnimationBuilder<double>(
+                        tween: Tween<double>(begin: 0, end: item.temperatureMin),
+                        duration: const Duration(milliseconds: 900),
+                        curve: Curves.easeOutCubic,
+                        builder: (context, val, _) {
+                          return Text(
+                            '${val.round()}°',
+                            style: AppTypography.dataMono.copyWith(
+                              fontSize: 13,
+                              color: const Color(0xFF94A3B8),
+                              fontWeight: FontWeight.w500,
+                            ),
+                            textAlign: TextAlign.right,
+                          );
+                        },
                       ),
                     ),
                     const SizedBox(width: 8),
 
-                    // Gradient Visual Temperature Bar (iOS style)
+                    // Gradient Visual Temperature Bar (Animated Horizontal Expansion)
                     Expanded(
                       child: LayoutBuilder(
                         builder: (context, constraints) {
                           final barWidth = constraints.maxWidth;
                           return Container(
-                            height: 4.5,
+                            height: 5.0,
                             decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.25),
+                              color: Colors.black.withOpacity(0.35),
                               borderRadius: BorderRadius.circular(3),
                             ),
-                            child: Stack(
-                              children: [
-                                Positioned(
-                                  left: leftFactor * barWidth,
-                                  width: widthFactor * barWidth,
-                                  top: 0,
-                                  bottom: 0,
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      gradient: const LinearGradient(
-                                        colors: [
-                                          Color(0xFF38BDF8), // Cyan for min
-                                          Color(0xFFFBBF24), // Amber
-                                          Color(0xFFFB923C), // Orange for max
-                                        ],
+                            child: TweenAnimationBuilder<double>(
+                              tween: Tween<double>(begin: 0.0, end: 1.0),
+                              duration: Duration(milliseconds: 800 + (index * 80).clamp(0, 400)),
+                              curve: Curves.easeOutCubic,
+                              builder: (context, animProgress, _) {
+                                return Stack(
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    // Colored range span (Expands smoothly)
+                                    Positioned(
+                                      left: leftFactor * barWidth,
+                                      width: (widthFactor * animProgress) * barWidth,
+                                      top: 0,
+                                      bottom: 0,
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          gradient: const LinearGradient(
+                                            colors: [
+                                              Color(0xFF38BDF8), // Cyan
+                                              Color(0xFFFBBF24), // Amber
+                                              Color(0xFFFB923C), // Sunset orange
+                                            ],
+                                          ),
+                                          borderRadius: BorderRadius.circular(3),
+                                        ),
                                       ),
-                                      borderRadius: BorderRadius.circular(3),
                                     ),
-                                  ),
-                                ),
-                              ],
+
+                                    // Current Temperature Indicator Dot for Today
+                                    if (currentFactor != null && animProgress > 0.4)
+                                      Positioned(
+                                        left: (currentFactor * barWidth - 3.5).clamp(0.0, barWidth - 7.0),
+                                        top: -1.0,
+                                        child: Transform.scale(
+                                          scale: animProgress,
+                                          child: Container(
+                                            width: 7.0,
+                                            height: 7.0,
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              shape: BoxShape.circle,
+                                              border: Border.all(
+                                                color: const Color(0xFF0F172A),
+                                                width: 1.2,
+                                              ),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.white.withOpacity(0.7),
+                                                  blurRadius: 3,
+                                                  spreadRadius: 0.5,
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                );
+                              },
                             ),
                           );
                         },
@@ -174,17 +236,24 @@ class DailyForecastWidget extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
 
-                    // Max Temp
+                    // Max Temp (Animated Counter)
                     SizedBox(
-                      width: 30,
-                      child: Text(
-                        '${item.temperatureMax.round()}°',
-                        style: AppTypography.dataMono.copyWith(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                        ),
-                        textAlign: TextAlign.right,
+                      width: 28,
+                      child: TweenAnimationBuilder<double>(
+                        tween: Tween<double>(begin: 0, end: item.temperatureMax),
+                        duration: const Duration(milliseconds: 900),
+                        curve: Curves.easeOutCubic,
+                        builder: (context, val, _) {
+                          return Text(
+                            '${val.round()}°',
+                            style: AppTypography.dataMono.copyWith(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                            textAlign: TextAlign.right,
+                          );
+                        },
                       ),
                     ),
                   ],

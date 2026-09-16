@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../models/weather_models.dart';
 import '../utils/theme.dart';
 import 'glass_container.dart';
-
 import '../utils/weather_math.dart';
 
 class MiniMetricsGrid extends StatelessWidget {
@@ -31,7 +30,8 @@ class MiniMetricsGrid extends StatelessWidget {
             Expanded(
               child: _buildMiniCard(
                 title: 'AIR QUALITY',
-                value: '${airQuality.aqi}',
+                targetNum: airQuality.aqi.toDouble(),
+                unit: '',
                 subtitle: aqiStatus,
                 icon: Icons.eco_rounded,
                 iconColor: airQuality.aqi <= 50
@@ -45,7 +45,8 @@ class MiniMetricsGrid extends StatelessWidget {
             Expanded(
               child: _buildMiniCard(
                 title: 'UV INDEX',
-                value: '${telemetry.uvIndex.round()}',
+                targetNum: telemetry.uvIndex,
+                unit: '',
                 subtitle: uvLabel,
                 icon: Icons.wb_sunny_rounded,
                 iconColor: telemetry.uvIndex >= 6
@@ -63,7 +64,8 @@ class MiniMetricsGrid extends StatelessWidget {
             Expanded(
               child: _buildMiniCard(
                 title: 'HUMIDITY',
-                value: '${telemetry.humidity}%',
+                targetNum: telemetry.humidity.toDouble(),
+                unit: '%',
                 subtitle:
                     telemetry.humidity > 70 ? 'High Moisture' : 'Comfortable',
                 icon: Icons.water_drop_rounded,
@@ -76,7 +78,8 @@ class MiniMetricsGrid extends StatelessWidget {
             Expanded(
               child: _buildMiniCard(
                 title: 'WIND',
-                value: '${telemetry.windSpeed.round()} km/h',
+                targetNum: telemetry.windSpeed,
+                unit: ' km/h',
                 subtitle:
                     '${telemetry.windDirectionCardinal} (Gusts ${telemetry.windGusts.round()})',
                 icon: Icons.air_rounded,
@@ -93,7 +96,8 @@ class MiniMetricsGrid extends StatelessWidget {
 
   Widget _buildMiniCard({
     required String title,
-    required String value,
+    required double targetNum,
+    required String unit,
     required String subtitle,
     required IconData icon,
     required Color iconColor,
@@ -121,16 +125,25 @@ class MiniMetricsGrid extends StatelessWidget {
             ],
           ),
 
-          // Value and Subtitle
+          const SizedBox(height: 6),
+
+          // Animated Increasing Value and Subtitle
           Row(
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
             children: [
-              Text(
-                value,
-                style: AppTypography.titleMd.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+              TweenAnimationBuilder<double>(
+                tween: Tween<double>(begin: 0.0, end: targetNum),
+                duration: const Duration(milliseconds: 900),
+                curve: Curves.easeOutCubic,
+                builder: (context, val, _) {
+                  return Text(
+                    '${val.round()}$unit',
+                    style: AppTypography.titleMd.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  );
+                },
               ),
               const SizedBox(width: 6),
               Expanded(
@@ -147,12 +160,14 @@ class MiniMetricsGrid extends StatelessWidget {
             ],
           ),
 
+          const SizedBox(height: 6),
+
           // Mini animated progress line indicator
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
             child: TweenAnimationBuilder<double>(
               tween: Tween<double>(begin: 0.0, end: progressPercentage),
-              duration: const Duration(milliseconds: 700),
+              duration: const Duration(milliseconds: 900),
               curve: Curves.easeOutCubic,
               builder: (context, val, child) {
                 return LinearProgressIndicator(

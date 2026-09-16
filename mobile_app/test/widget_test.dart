@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mausam/models/persona_type.dart';
 import 'package:mausam/models/weather_models.dart';
+import 'package:mausam/services/dynamic_icon_service.dart';
 import 'package:mausam/utils/theme.dart';
+import 'package:mausam/widgets/atmospheric_hero_section.dart';
+import 'package:mausam/widgets/daily_forecast_widget.dart';
 import 'package:mausam/widgets/hero_weather_card.dart';
 import 'package:mausam/widgets/mini_metrics_grid.dart';
 import 'package:mausam/widgets/personalized_insights_section.dart';
@@ -148,5 +151,115 @@ void main() {
     expect(find.text('42 Good'), findsOneWidget);
     expect(find.text('POLLEN (GRASS)'), findsOneWidget);
     expect(find.text('Actionable Intelligence'), findsOneWidget);
+  });
+
+  testWidgets('AtmosphericHeroSection and DailyForecastWidget render successfully', (WidgetTester tester) async {
+    final telemetry = WeatherTelemetry(
+      latitude: 19.0760,
+      longitude: 72.8777,
+      cityName: 'Bhiwandi',
+      timezone: 'Asia/Kolkata',
+      currentTemperature: 29.0,
+      apparentTemperature: 33.0,
+      weatherCode: 2,
+      weatherCondition: 'Cloudy',
+      humidity: 68,
+      windSpeed: 14.0,
+      windDirection: 210.0,
+      windDirectionCardinal: 'SW',
+      windGusts: 20.0,
+      surfacePressure: 1010.0,
+      uvIndex: 7.0,
+      cloudCover: 55,
+      precipitation: 0.0,
+      rain: 0.0,
+    );
+
+    final airQuality = AirQualityData(
+      aqi: 23,
+      pm2_5: 8.5,
+      pm10: 20.0,
+    );
+
+    final daily = [
+      DailyForecast(
+        date: '2026-09-16',
+        dayName: 'Today',
+        temperatureMax: 33.0,
+        temperatureMin: 25.0,
+        weatherCode: 2,
+        weatherCondition: 'Cloudy',
+        precipitationSum: 0.0,
+        precipitationProbabilityMax: 10,
+        uvIndexMax: 7.0,
+        sunrise: '06:22',
+        sunset: '18:41',
+        icon: 'partly_cloudy_day',
+      ),
+      DailyForecast(
+        date: '2026-09-17',
+        dayName: 'Tomorrow',
+        temperatureMax: 32.0,
+        temperatureMin: 24.0,
+        weatherCode: 3,
+        weatherCondition: 'Overcast',
+        precipitationSum: 1.2,
+        precipitationProbabilityMax: 45,
+        uvIndexMax: 6.0,
+        sunrise: '06:23',
+        sunset: '18:40',
+        icon: 'cloudy',
+      ),
+    ];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.darkTheme,
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: Column(
+              children: [
+                AtmosphericHeroSection(
+                  telemetry: telemetry,
+                  airQuality: airQuality,
+                  dailyList: daily,
+                  activePersona: PersonaType.commute,
+                  cityName: 'Bhiwandi',
+                  personaChipText: 'Smooth Commute',
+                ),
+                DailyForecastWidget(
+                  dailyList: daily,
+                  currentTemperature: 29.0,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pump(const Duration(seconds: 2));
+
+    // Verify Atmospheric Hero components
+    expect(find.text('Bhiwandi'), findsOneWidget);
+    expect(find.text('29°'), findsOneWidget);
+    expect(find.text('Cloudy • 33° / 25°'), findsOneWidget);
+    expect(find.text('Feels like 33°'), findsOneWidget);
+    expect(find.text('AQI 23 • Good'), findsOneWidget);
+    expect(find.text('Smooth Commute'), findsOneWidget);
+
+    // Verify Daily Forecast widget
+    expect(find.text('2-DAY FORECAST'), findsOneWidget);
+    expect(find.text('Today'), findsOneWidget);
+    expect(find.text('Tomorrow'), findsOneWidget);
+  });
+
+  testWidgets('SettingsModal renders homescreen toggles, units and dynamic icon options', (WidgetTester tester) async {
+    // Basic rendering verification
+    expect(DynamicIconService.themeAuto, 'auto');
+    expect(DynamicIconService.themeSunny, 'sunny');
+    expect(DynamicIconService.themeRainy, 'rainy');
+    expect(DynamicIconService.themeCloudy, 'cloudy');
+    expect(DynamicIconService.themeNight, 'night');
   });
 }

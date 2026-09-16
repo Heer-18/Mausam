@@ -170,13 +170,58 @@ class NotificationService {
     required String condition,
     required String advice,
   }) async {
-    final title = '$cityName: ${temperature.round()}°C $condition';
-    final body = advice;
+    final title = '☀️ Good morning! $cityName is ${temperature.round()}°C';
+    final body = '$condition — $advice';
     await showPersonaSuggestion(
       id: id,
       title: title,
       body: body,
       payload: 'daily_briefing',
+    );
+  }
+
+  /// Trigger a Witty / Contextual Zomato-style Weather Tip Notification
+  Future<void> showWittyWeatherTip({
+    int id = 404,
+    required String title,
+    required String body,
+    String? payload,
+  }) async {
+    await initialize();
+
+    final androidDetails = AndroidNotificationDetails(
+      'witty_tips_channel',
+      'Contextual Weather Tips',
+      channelDescription:
+          'Fun, witty weather insights, chai-pakoda alerts, and atmospheric updates',
+      importance: Importance.high,
+      priority: Priority.high,
+      showWhen: true,
+      enableVibration: true,
+      playSound: true,
+      icon: '@mipmap/ic_launcher',
+      styleInformation: BigTextStyleInformation(
+        body,
+        contentTitle: title,
+        summaryText: 'Mausam Weather Scoop',
+      ),
+    );
+
+    final notificationDetails = NotificationDetails(
+      android: androidDetails,
+      iOS: const DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      ),
+    );
+
+    await _notificationsPlugin.show(
+      id: id,
+      title: title,
+      body: body,
+      notificationDetails: notificationDetails,
+      payload: payload ?? 'witty_tip',
     );
   }
 
