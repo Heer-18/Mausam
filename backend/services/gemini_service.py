@@ -57,7 +57,7 @@ class GeminiAdvisorService:
                 prompt = f"User asks: {message}"
 
                 response = self.client.models.generate_content(
-                    model='gemini-2.5-flash',
+                    model='gemini-3.6-flash',
                     contents=prompt,
                     config={
                         'system_instruction': system_instruction,

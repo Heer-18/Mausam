@@ -269,7 +269,7 @@ Operational Guidelines:
 
     final requestBodyJson = jsonEncode(requestPayload);
 
-    // Multi-key failover loop
+    // Multi-key and multi-model failover loop
     String? lastErrorMessage;
     int quotaExhaustedCount = 0;
 
@@ -277,82 +277,83 @@ Operational Guidelines:
       final keyIndex = (_activeKeyIndex + attempt) % allKeys.length;
       final currentApiKey = allKeys[keyIndex];
 
-      final primaryUri = Uri.parse(
-        'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$currentApiKey',
-      );
-      final fallbackUri = Uri.parse(
-        'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=$currentApiKey',
-      );
-
       debugPrint('[GeminiService] Attempting key ${attempt + 1}/${allKeys.length} (${_maskKey(currentApiKey)})');
 
-      try {
-        var response = await _client
-            .post(
-              primaryUri,
-              headers: {'Content-Type': 'application/json'},
-              body: requestBodyJson,
-            )
-            .timeout(const Duration(seconds: 15));
+      bool keyQuotaExhausted = false;
 
-        // Fallback model if 404
-        if (response.statusCode == 404) {
-          debugPrint('[GeminiService] gemini-2.5-flash returned 404, attempting gemini-2.0-flash...');
-          response = await _client
+      for (final model in candidateModels) {
+        final uri = Uri.parse(
+          'https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$currentApiKey',
+        );
+
+        try {
+          final response = await _client
               .post(
-                fallbackUri,
+                uri,
                 headers: {'Content-Type': 'application/json'},
                 body: requestBodyJson,
               )
               .timeout(const Duration(seconds: 15));
-        }
 
-        // Check for 200 OK
-        if (response.statusCode == 200) {
-          final data = jsonDecode(response.body) as Map<String, dynamic>;
-          final candidates = data['candidates'] as List<dynamic>?;
-          if (candidates != null && candidates.isNotEmpty) {
-            final candidate = candidates[0] as Map<String, dynamic>;
-            final content = candidate['content'] as Map<String, dynamic>?;
-            final parts = content?['parts'] as List<dynamic>?;
-            if (parts != null && parts.isNotEmpty) {
-              final text = parts[0]['text'] as String?;
-              if (text != null && text.trim().isNotEmpty) {
-                // Success! Set this as the active key for subsequent calls
-                _activeKeyIndex = keyIndex;
-                return text.trim();
+          // If model is not found (404), fall back to next candidate model immediately
+          if (response.statusCode == 404) {
+            debugPrint('[GeminiService] Model $model returned 404 for key #${keyIndex + 1}, trying next candidate model...');
+            lastErrorMessage = 'HTTP 404: Model $model not found';
+            continue;
+          }
+
+          // Check for 200 OK
+          if (response.statusCode == 200) {
+            final data = jsonDecode(response.body) as Map<String, dynamic>;
+            final candidates = data['candidates'] as List<dynamic>?;
+            if (candidates != null && candidates.isNotEmpty) {
+              final candidate = candidates[0] as Map<String, dynamic>;
+              final content = candidate['content'] as Map<String, dynamic>?;
+              final parts = content?['parts'] as List<dynamic>?;
+              if (parts != null && parts.isNotEmpty) {
+                final text = parts[0]['text'] as String?;
+                if (text != null && text.trim().isNotEmpty) {
+                  // Success! Set this as the active key for subsequent calls
+                  _activeKeyIndex = keyIndex;
+                  return text.trim();
+                }
               }
             }
           }
-        }
 
-        // Rate Limit / Quota Exceeded (HTTP 429) or Resource Exhausted
-        final isQuotaError = response.statusCode == 429 ||
-            response.body.contains('RESOURCE_EXHAUSTED') ||
-            response.body.toLowerCase().contains('quota exceeded') ||
-            response.body.toLowerCase().contains('rate limit');
+          // Rate Limit / Quota Exceeded (HTTP 429) or Resource Exhausted
+          final isQuotaError = response.statusCode == 429 ||
+              response.body.contains('RESOURCE_EXHAUSTED') ||
+              response.body.toLowerCase().contains('quota exceeded') ||
+              response.body.toLowerCase().contains('rate limit');
 
-        if (isQuotaError) {
-          quotaExhaustedCount++;
-          debugPrint('[GeminiService] Key #${keyIndex + 1} (${_maskKey(currentApiKey)}) exceeded quota (HTTP ${response.statusCode}). Rotating to next key...');
-          lastErrorMessage = 'HTTP ${response.statusCode} Quota Exceeded: ${response.body}';
-          continue; // Try next key
-        }
-
-        // Other HTTP error
-        String errorMsg = response.body;
-        try {
-          final decoded = jsonDecode(response.body);
-          if (decoded is Map && decoded['error'] != null && decoded['error']['message'] != null) {
-            errorMsg = decoded['error']['message'];
+          if (isQuotaError) {
+            keyQuotaExhausted = true;
+            quotaExhaustedCount++;
+            debugPrint('[GeminiService] Key #${keyIndex + 1} (${_maskKey(currentApiKey)}) exceeded quota (HTTP ${response.statusCode}). Rotating to next key...');
+            lastErrorMessage = 'HTTP ${response.statusCode} Quota Exceeded: ${response.body}';
+            break; // Stop trying models on this key, rotate to next API key
           }
-        } catch (_) {}
 
-        lastErrorMessage = 'HTTP ${response.statusCode}: $errorMsg';
-        debugPrint('[GeminiService] Error with key #${keyIndex + 1}: $lastErrorMessage');
-      } catch (e) {
-        debugPrint('[GeminiService] Exception with key #${keyIndex + 1}: $e');
-        lastErrorMessage = e.toString();
+          // Other HTTP error
+          String errorMsg = response.body;
+          try {
+            final decoded = jsonDecode(response.body);
+            if (decoded is Map && decoded['error'] != null && decoded['error']['message'] != null) {
+              errorMsg = decoded['error']['message'];
+            }
+          } catch (_) {}
+
+          lastErrorMessage = 'HTTP ${response.statusCode}: $errorMsg';
+          debugPrint('[GeminiService] Error with model $model on key #${keyIndex + 1}: $lastErrorMessage');
+        } catch (e) {
+          debugPrint('[GeminiService] Exception with model $model on key #${keyIndex + 1}: $e');
+          lastErrorMessage = e.toString();
+        }
+      }
+
+      if (keyQuotaExhausted) {
+        continue;
       }
     }
 
@@ -367,6 +368,16 @@ Operational Guidelines:
 
     throw Exception('Gemini API request failed across all ${allKeys.length} configured keys. Last error: $lastErrorMessage');
   }
+
+  /// Candidate Gemini models prioritized from most modern to fallback
+  static const List<String> candidateModels = [
+    'gemini-3.6-flash',
+    'gemini-3.7-flash',
+    'gemini-3.5-flash',
+    'gemini-1.5-flash',
+    'gemini-1.5-flash-8b',
+    'gemini-1.5-pro',
+  ];
 
   /// Generate a concise conversation title with multi-key support
   static Future<String?> generateChatTitle({
@@ -394,10 +405,6 @@ Context: City: $cityName, Persona: $persona
 
 Title:''';
 
-      final uri = Uri.parse(
-        'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey',
-      );
-
       final payload = {
         'contents': [
           {
@@ -413,36 +420,46 @@ Title:''';
         }
       };
 
-      final response = await _client
-          .post(
-            uri,
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode(payload),
-          )
-          .timeout(const Duration(seconds: 8));
+      for (final model in candidateModels) {
+        final uri = Uri.parse(
+          'https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$apiKey',
+        );
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final candidates = data['candidates'] as List<dynamic>?;
-        if (candidates != null && candidates.isNotEmpty) {
-          final candidate = candidates[0] as Map<String, dynamic>;
-          final content = candidate['content'] as Map<String, dynamic>?;
-          final parts = content?['parts'] as List<dynamic>?;
-          if (parts != null && parts.isNotEmpty) {
-            final text = parts[0]['text'] as String?;
-            if (text != null && text.trim().isNotEmpty) {
-              final clean = text
-                  .replaceAll('"', '')
-                  .replaceAll("'", '')
-                  .replaceAll('.', '')
-                  .replaceAll('Title:', '')
-                  .replaceAll('\n', ' ')
-                  .trim();
-              if (clean.isNotEmpty && clean.length <= 40) {
-                return clean;
+        final response = await _client
+            .post(
+              uri,
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode(payload),
+            )
+            .timeout(const Duration(seconds: 8));
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body) as Map<String, dynamic>;
+          final candidates = data['candidates'] as List<dynamic>?;
+          if (candidates != null && candidates.isNotEmpty) {
+            final candidate = candidates[0] as Map<String, dynamic>;
+            final content = candidate['content'] as Map<String, dynamic>?;
+            final parts = content?['parts'] as List<dynamic>?;
+            if (parts != null && parts.isNotEmpty) {
+              final text = parts[0]['text'] as String?;
+              if (text != null && text.trim().isNotEmpty) {
+                final clean = text
+                    .replaceAll('"', '')
+                    .replaceAll("'", '')
+                    .replaceAll('.', '')
+                    .replaceAll('Title:', '')
+                    .replaceAll('\n', ' ')
+                    .trim();
+                if (clean.isNotEmpty && clean.length <= 40) {
+                  return clean;
+                }
               }
             }
           }
+        } else if (response.statusCode == 404) {
+          continue;
+        } else {
+          break;
         }
       }
     } catch (_) {}
