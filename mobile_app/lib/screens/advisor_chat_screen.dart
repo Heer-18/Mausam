@@ -9,7 +9,6 @@ import '../models/chat_session.dart';
 import '../providers/weather_provider.dart';
 import '../utils/theme.dart';
 import '../widgets/glass_container.dart';
-import '../widgets/location_search_modal.dart';
 import '../widgets/persona_modal.dart';
 
 class AdvisorChatScreen extends StatefulWidget {
@@ -321,6 +320,19 @@ class _AdvisorChatScreenState extends State<AdvisorChatScreen> {
     super.dispose();
   }
 
+  String _getGreetingHeader() {
+    final hour = DateTime.now().hour;
+    if (hour >= 5 && hour < 12) {
+      return 'Good morning';
+    } else if (hour >= 12 && hour < 17) {
+      return 'Good afternoon';
+    } else if (hour >= 17 && hour < 21) {
+      return 'Good evening';
+    } else {
+      return 'Good night';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<WeatherProvider>(
@@ -329,48 +341,78 @@ class _AdvisorChatScreenState extends State<AdvisorChatScreen> {
         final bool isNight = currentHour < 6 || currentHour >= 19;
         final bool isNightOrZeroUv = isNight || (provider.telemetry?.uvIndex ?? 0) <= 0.5;
         final quickPrompts = _getQuickPrompts(isNightOrZeroUv);
-        final activeSession = provider.activeSession;
+        final isKeyboardUp = MediaQuery.of(context).viewInsets.bottom > 0;
+
+        // Check if session has user messages or is in welcome greeting state
+        final userMessages = provider.chatMessages.where((m) => m.isUser).toList();
+        final showGreetingHero = userMessages.isEmpty;
 
         return Scaffold(
           backgroundColor: Colors.transparent,
+          resizeToAvoidBottomInset: true,
           appBar: AppBar(
             backgroundColor: Colors.transparent,
+            elevation: 0,
             leading: IconButton(
               icon: const Icon(Icons.forum_outlined, color: AppColors.primary, size: 22),
-              tooltip: 'Recent Conversations',
+              tooltip: 'Conversations',
               onPressed: () => _showChatSessionsSheet(context, provider),
             ),
-            title: InkWell(
-              borderRadius: BorderRadius.circular(16),
-              onTap: () {
-                showModalBottomSheet(
-                  context: context,
-                  isScrollControlled: true,
-                  backgroundColor: Colors.transparent,
-                  builder: (context) => const LocationSearchModal(),
-                );
-              },
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.location_on_rounded, color: AppColors.primary, size: 18),
-                  const SizedBox(width: 4),
-                  Flexible(
-                    child: Text(
-                      provider.cityName,
-                      style: AppTypography.titleMd.copyWith(fontSize: 15),
-                      overflow: TextOverflow.ellipsis,
+            title: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Glowing Minimalist AI Sparkle Logo
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: const LinearGradient(
+                      colors: [AppColors.primaryContainer, AppColors.fitnessViolet],
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primaryContainer.withOpacity(0.4),
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 2),
-                  const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.onSurfaceVariant, size: 16),
-                ],
-              ),
+                  child: const Icon(
+                    Icons.auto_awesome_rounded,
+                    color: Colors.white,
+                    size: 15,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'AdvisorAI',
+                      style: AppTypography.titleMd.copyWith(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                    Text(
+                      '${provider.activePersona.shortTitle} • ${provider.cityName}',
+                      style: AppTypography.labelCaps.copyWith(
+                        fontSize: 10,
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
             actions: [
               IconButton(
-                icon: const Icon(Icons.edit_note_rounded, color: AppColors.electricCyan, size: 24),
-                tooltip: 'New Chat',
+                icon: const Icon(Icons.add_comment_outlined, color: AppColors.electricCyan, size: 22),
+                tooltip: 'New Conversation',
                 onPressed: () {
                   provider.createNewChatSession();
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -397,147 +439,34 @@ class _AdvisorChatScreenState extends State<AdvisorChatScreen> {
           ),
           body: Column(
             children: [
-              // Subheader Card with Active Session Title & Persona Pill
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
-                child: GlassContainer(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
-                  borderRadius: 20.0,
-                  fillColor: AppColors.primaryContainer.withOpacity(0.08),
-                  borderColor: AppColors.primaryContainer.withOpacity(0.2),
-                  child: Row(
-                    children: [
-                      // AI Avatar Icon with Glow
-                      Container(
-                        width: 38,
-                        height: 38,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: const LinearGradient(
-                            colors: [AppColors.primaryContainer, AppColors.fitnessViolet],
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.primaryContainer.withOpacity(0.35),
-                              blurRadius: 10,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.auto_awesome_rounded,
-                          color: Colors.white,
-                          size: 18,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-
-                      // Session Title and Persona Pill
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'AdvisorAI',
-                              style: AppTypography.headlineMd.copyWith(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            Text(
-                              activeSession.title,
-                              style: AppTypography.bodySm.copyWith(
-                                fontSize: 11,
-                                color: AppColors.onSurfaceVariant,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          provider.activePersona.shortTitle,
-                          style: AppTypography.labelCaps.copyWith(
-                            fontSize: 10,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              // Quick Prompt Suggestion Chips (Horizontal Carousel)
-              Container(
-                height: 44,
-                margin: const EdgeInsets.only(top: 6.0),
-                child: ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  scrollDirection: Axis.horizontal,
-                  itemCount: quickPrompts.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 8),
-                  itemBuilder: (context, index) {
-                    final prompt = quickPrompts[index];
-                    return ActionChip(
-                      backgroundColor: AppColors.surface.withOpacity(0.65),
-                      side: BorderSide(
-                        color: AppColors.primary.withOpacity(0.2),
-                        width: 1,
-                      ),
-                      elevation: 0,
-                      pressElevation: 3,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      label: Text(
-                        prompt,
-                        style: AppTypography.bodySm.copyWith(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: AppColors.onSurface,
-                        ),
-                      ),
-                      onPressed: () => _sendMessage(prompt),
-                    );
-                  },
-                ),
-              ),
-
-              // Chat Message Stream List
+              // Chat Message Stream or Greeting Section
               Expanded(
-                child: ListView.builder(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
-                  itemCount: provider.chatMessages.length,
-                  itemBuilder: (context, index) {
-                    final msg = provider.chatMessages[index];
-                    return TweenAnimationBuilder<double>(
-                      key: ValueKey(msg.id),
-                      tween: Tween<double>(begin: 0.0, end: 1.0),
-                      duration: const Duration(milliseconds: 280),
-                      curve: Curves.easeOutCubic,
-                      builder: (context, animValue, child) {
-                        return Opacity(
-                          opacity: animValue,
-                          child: Transform.translate(
-                            offset: Offset(0, 12 * (1 - animValue)),
-                            child: child,
-                          ),
-                        );
-                      },
-                      child: _buildMessageBubble(msg),
-                    );
-                  },
-                ),
+                child: showGreetingHero
+                    ? _buildGreetingWelcomeSection(provider, quickPrompts)
+                    : ListView.builder(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+                        itemCount: provider.chatMessages.length,
+                        itemBuilder: (context, index) {
+                          final msg = provider.chatMessages[index];
+                          return TweenAnimationBuilder<double>(
+                            key: ValueKey(msg.id),
+                            tween: Tween<double>(begin: 0.0, end: 1.0),
+                            duration: const Duration(milliseconds: 280),
+                            curve: Curves.easeOutCubic,
+                            builder: (context, animValue, child) {
+                              return Opacity(
+                                opacity: animValue,
+                                child: Transform.translate(
+                                  offset: Offset(0, 12 * (1 - animValue)),
+                                  child: child,
+                                ),
+                              );
+                            },
+                            child: _buildMessageBubble(msg),
+                          );
+                        },
+                      ),
               ),
 
               // Animated Chat Loading Bubble with Pulsing Dots
@@ -550,18 +479,19 @@ class _AdvisorChatScreenState extends State<AdvisorChatScreen> {
                   ),
                 ),
 
-              // Bottom Input Bar with Attachment Preview Tray (Snug fit above bottom nav when closed, and snug 8px on top of keyboard when open)
+              // Bottom Input Bar with Attachment Preview Tray (Flush right above virtual keyboard)
               Container(
                 padding: EdgeInsets.fromLTRB(
                   16,
                   4,
                   16,
-                  MediaQuery.of(context).viewInsets.bottom > 0 ? 8.0 : 88.0,
+                  isKeyboardUp ? 8.0 : 84.0,
                 ),
                 child: GlassContainer(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   borderRadius: 26,
                   borderColor: AppColors.glassBorderBright,
+                  fillColor: const Color(0xFF0F172A).withOpacity(0.85),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -685,7 +615,7 @@ class _AdvisorChatScreenState extends State<AdvisorChatScreen> {
                               style: AppTypography.bodyMd,
                               onSubmitted: (value) => _sendMessage(),
                               decoration: InputDecoration(
-                                hintText: 'Ask AdvisorAI',
+                                hintText: 'Ask anything about weather & decisions...',
                                 hintStyle: AppTypography.bodySm.copyWith(
                                   color: AppColors.onSurfaceVariant.withOpacity(0.5),
                                 ),
@@ -722,6 +652,200 @@ class _AdvisorChatScreenState extends State<AdvisorChatScreen> {
           ),
         );
       },
+    );
+  }
+
+  /// Interactive ChatGPT / Gemini style Greeting Section for fresh conversations
+  Widget _buildGreetingWelcomeSection(WeatherProvider provider, List<String> quickPrompts) {
+    final greeting = _getGreetingHeader();
+    final temp = provider.telemetry != null ? '${provider.telemetry!.currentTemperature.round()}°C' : '--';
+    final condition = provider.telemetry?.weatherCondition ?? 'Clear';
+    final aqi = provider.airQuality?.aqi ?? 20;
+
+    final List<Map<String, dynamic>> suggestionCards = [
+      {
+        'title': 'Outdoor Running Window',
+        'subtitle': 'Check best time & air quality for workout',
+        'icon': Icons.directions_run_rounded,
+        'color': AppColors.fitnessViolet,
+        'prompt': 'What is the best running and workout window today in ${provider.cityName}?',
+      },
+      {
+        'title': 'Rain & Precipitation',
+        'subtitle': 'Hourly rain probability and timing',
+        'icon': Icons.water_drop_rounded,
+        'color': AppColors.electricCyan,
+        'prompt': 'Will it rain today in ${provider.cityName}? Give me the hourly precipitation breakdown.',
+      },
+      {
+        'title': 'Crop & Soil Advice',
+        'subtitle': 'Irrigation recommendations and moisture',
+        'icon': Icons.eco_rounded,
+        'color': AppColors.agriEmerald,
+        'prompt': 'What is the crop irrigation and soil moisture status for ${provider.cityName} today?',
+      },
+      {
+        'title': 'Outfit & UV Protection',
+        'subtitle': 'Clothing and sunscreen recommendations',
+        'icon': Icons.wb_sunny_rounded,
+        'color': AppColors.warningAmber,
+        'prompt': 'What should I wear today based on the temperature, UV index, and wind in ${provider.cityName}?',
+      },
+    ];
+
+    return ListView(
+      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
+      children: [
+        const SizedBox(height: 12),
+
+        // Glowing AI Welcome Orb
+        Center(
+          child: Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: const LinearGradient(
+                colors: [AppColors.primaryContainer, AppColors.fitnessViolet],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primaryContainer.withOpacity(0.45),
+                  blurRadius: 24,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: const Center(
+              child: Icon(
+                Icons.auto_awesome_rounded,
+                color: Colors.white,
+                size: 30,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Dynamic Time-Based Greeting
+        Center(
+          child: Text(
+            '$greeting, Explorer ✨',
+            style: AppTypography.headlineLg.copyWith(
+              fontSize: 24,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Center(
+          child: Text(
+            'How can Mausam AI assist your day?',
+            style: AppTypography.bodySm.copyWith(
+              fontSize: 14,
+              color: AppColors.onSurfaceVariant,
+            ),
+          ),
+        ),
+        const SizedBox(height: 18),
+
+        // Live Weather Context Pill
+        Center(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppColors.surface.withOpacity(0.65),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppColors.glassBorderBright),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.location_on_rounded, size: 14, color: AppColors.primary),
+                const SizedBox(width: 4),
+                Text(
+                  '${provider.cityName} • $temp $condition • AQI $aqi',
+                  style: AppTypography.bodySm.copyWith(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
+
+        // Suggested Action Prompt Cards
+        Text(
+          'SUGGESTED FOR YOU',
+          style: AppTypography.labelCaps.copyWith(
+            fontSize: 11,
+            color: AppColors.onSurfaceVariant.withOpacity(0.8),
+            letterSpacing: 1.0,
+          ),
+        ),
+        const SizedBox(height: 10),
+
+        ...suggestionCards.map((card) {
+          final color = card['color'] as Color;
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 10.0),
+            child: InkWell(
+              onTap: () => _sendMessage(card['prompt'] as String),
+              borderRadius: BorderRadius.circular(18),
+              child: GlassContainer(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                borderRadius: 18,
+                fillColor: AppColors.surface.withOpacity(0.55),
+                borderColor: AppColors.glassBorder,
+                child: Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: color.withOpacity(0.18),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: color.withOpacity(0.35)),
+                      ),
+                      child: Icon(card['icon'] as IconData, color: color, size: 20),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            card['title'] as String,
+                            style: AppTypography.titleMd.copyWith(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            card['subtitle'] as String,
+                            style: AppTypography.bodySm.copyWith(
+                              fontSize: 12,
+                              color: AppColors.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.onSurfaceVariant),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }),
+        const SizedBox(height: 16),
+      ],
     );
   }
 
@@ -863,6 +987,7 @@ class _AdvisorChatScreenState extends State<AdvisorChatScreen> {
       }
     }
 
+    // Modern clean AI message bubble without redundant "AdvisorAI" title
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
@@ -871,66 +996,52 @@ class _AdvisorChatScreenState extends State<AdvisorChatScreen> {
           padding: const EdgeInsets.all(16.0),
           borderRadius: 20.0,
           fillColor: isErrorMessage
-              ? const Color(0xFF7F1D1D).withOpacity(0.25)
-              : AppColors.surface.withOpacity(0.75),
+              ? const Color(0xFF7F1D1D).withOpacity(0.3)
+              : const Color(0xFF0F172A).withOpacity(0.7),
           borderColor: isErrorMessage
               ? const Color(0xFFEF4444).withOpacity(0.5)
               : AppColors.glassBorderBright,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Advisor AI Header
-              Row(
-                children: [
-                  Container(
-                    width: 24,
-                    height: 24,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: isErrorMessage
-                          ? const LinearGradient(
-                              colors: [Color(0xFFDC2626), Color(0xFFF59E0B)],
-                            )
-                          : const LinearGradient(
-                              colors: [AppColors.primaryContainer, AppColors.fitnessViolet],
-                            ),
-                    ),
-                    child: Icon(
-                      isErrorMessage ? Icons.warning_amber_rounded : Icons.auto_awesome_rounded,
-                      color: Colors.white,
-                      size: 13,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    isErrorMessage ? 'AdvisorAI Status' : 'AdvisorAI',
-                    style: AppTypography.titleMd.copyWith(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: isErrorMessage ? const Color(0xFFFCA5A5) : Colors.white,
-                    ),
-                  ),
-                  const Spacer(),
-                  if (msg.persona != null && !isErrorMessage)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        msg.persona!,
-                        style: AppTypography.labelCaps.copyWith(
-                          fontSize: 9,
-                          color: AppColors.primary,
+              // Subtle top accessory if warning or persona badge
+              if (isErrorMessage || msg.persona != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (isErrorMessage) ...[
+                        const Icon(Icons.warning_amber_rounded, color: Color(0xFFFCA5A5), size: 16),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Advisory Notice',
+                          style: AppTypography.labelCaps.copyWith(
+                            color: const Color(0xFFFCA5A5),
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 10),
+                      ] else if (msg.persona != null) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            msg.persona!,
+                            style: AppTypography.labelCaps.copyWith(
+                              fontSize: 9,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
 
-              // Response Text with inline formatting
+              // Response Text with clean inline formatting
               _buildFormattedText(
                 bodyText,
                 AppTypography.bodyMd.copyWith(
@@ -1336,7 +1447,7 @@ class _AnimatedTypingIndicatorState extends State<_AnimatedTypingIndicator>
     return GlassContainer(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
       borderRadius: 20.0,
-      fillColor: AppColors.surface.withOpacity(0.9),
+      fillColor: const Color(0xFF0F172A).withOpacity(0.9),
       borderColor: AppColors.primaryContainer.withOpacity(0.4),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1381,7 +1492,7 @@ class _AnimatedTypingIndicatorState extends State<_AnimatedTypingIndicator>
           ),
           const SizedBox(width: 10),
           Text(
-            'AdvisorAI is analyzing live telemetry...',
+            'Analyzing live telemetry...',
             style: AppTypography.bodySm.copyWith(
               fontSize: 11,
               color: AppColors.primary,

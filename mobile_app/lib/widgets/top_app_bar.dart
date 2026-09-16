@@ -25,7 +25,7 @@ class MausamTopAppBar extends StatelessWidget implements PreferredSizeWidget {
             filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
             child: Container(
               decoration: BoxDecoration(
-                color: AppColors.surface.withOpacity(0.85),
+                color: Colors.black.withOpacity(0.18),
                 border: Border(
                   bottom: BorderSide(
                     color: Colors.white.withOpacity(0.08),

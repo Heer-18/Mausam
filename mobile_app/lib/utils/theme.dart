@@ -62,57 +62,64 @@ class AppColors {
 
 class AppTypography {
   static const TextStyle displayTemp = TextStyle(
-    fontSize: 92,
-    fontWeight: FontWeight.w700,
-    letterSpacing: -2.0,
-    color: AppColors.onSurface,
+    fontSize: 88,
+    fontWeight: FontWeight.w200,
+    letterSpacing: -2.5,
+    color: Colors.white,
     height: 1.0,
+    shadows: [
+      Shadow(
+        color: Color(0x33000000),
+        blurRadius: 16,
+        offset: Offset(0, 4),
+      ),
+    ],
   );
 
   static const TextStyle headlineLg = TextStyle(
     fontSize: 28,
     fontWeight: FontWeight.w700,
     letterSpacing: -0.5,
-    color: AppColors.onSurface,
+    color: Colors.white,
   );
 
   static const TextStyle headlineMd = TextStyle(
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: FontWeight.w600,
     letterSpacing: -0.3,
-    color: AppColors.onSurface,
+    color: Colors.white,
   );
 
   static const TextStyle titleMd = TextStyle(
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: FontWeight.w600,
-    color: AppColors.onSurface,
+    color: Colors.white,
   );
 
   static const TextStyle bodyMd = TextStyle(
     fontSize: 15,
     fontWeight: FontWeight.w400,
-    color: AppColors.onSurface,
+    color: Color(0xFFF1F5F9),
     height: 1.4,
   );
 
   static const TextStyle bodySm = TextStyle(
     fontSize: 13,
     fontWeight: FontWeight.w400,
-    color: AppColors.onSurfaceVariant,
+    color: Color(0xFFE2E8F0),
   );
 
   static const TextStyle labelCaps = TextStyle(
     fontSize: 11,
-    fontWeight: FontWeight.w700,
-    letterSpacing: 1.1,
-    color: AppColors.onSurfaceVariant,
+    fontWeight: FontWeight.w600,
+    letterSpacing: 0.8,
+    color: Color(0xFFCBD5E1),
   );
 
   static const TextStyle dataMono = TextStyle(
     fontSize: 14,
     fontWeight: FontWeight.w600,
-    color: AppColors.onSurface,
+    color: Colors.white,
   );
 }
 

@@ -67,19 +67,19 @@ class _HeroWeatherCardState extends State<HeroWeatherCard>
     return GlassContainer(
       padding: const EdgeInsets.all(22.0),
       borderRadius: 24.0,
-      gradient: AppColors.heroCardGradient,
-      borderColor: AppColors.glassBorderBright,
+      fillColor: const Color(0xFF0F172A).withOpacity(0.4),
+      borderColor: Colors.white.withOpacity(0.18),
       child: Stack(
         children: [
-          // Background ambient radial blur
+          // Ambient glow behind condition icon
           Positioned(
-            right: -30,
-            top: -30,
+            right: -20,
+            top: -20,
             child: AnimatedBuilder(
               animation: _glowAnimation,
               builder: (context, child) => Container(
-                width: 140 * _glowAnimation.value,
-                height: 140 * _glowAnimation.value,
+                width: 130 * _glowAnimation.value,
+                height: 130 * _glowAnimation.value,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: iconColor.withOpacity(0.12),
@@ -91,23 +91,65 @@ class _HeroWeatherCardState extends State<HeroWeatherCard>
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Weather Condition Header
+              // Weather Condition Header & AQI Pill
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Icon(conditionIcon, color: iconColor, size: 24),
-                  const SizedBox(width: 8),
-                  Text(
-                    widget.telemetry.weatherCondition,
-                    style: AppTypography.titleMd.copyWith(
-                      color: AppColors.onSurfaceVariant,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  Row(
+                    children: [
+                      Icon(conditionIcon, color: iconColor, size: 22),
+                      const SizedBox(width: 8),
+                      Text(
+                        widget.telemetry.weatherCondition,
+                        style: AppTypography.titleMd.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
                   ),
+                  if (widget.statusChipText != null && widget.statusChipText!.isNotEmpty)
+                    Flexible(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: (widget.statusChipColor ?? AppColors.primary).withOpacity(0.18),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: (widget.statusChipColor ?? AppColors.primary).withOpacity(0.35),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              widget.statusChipIcon ?? Icons.eco_rounded,
+                              size: 13,
+                              color: widget.statusChipColor ?? AppColors.primary,
+                            ),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                widget.statusChipText!,
+                                style: AppTypography.labelCaps.copyWith(
+                                  fontSize: 10,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                 ],
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
 
-              // Main Temperature & Illustration Row
+              // Main Large Temperature & Floating Animated Icon
               Row(
                 crossAxisAlignment: CrossAxisAlignment.baseline,
                 textBaseline: TextBaseline.alphabetic,
@@ -128,14 +170,15 @@ class _HeroWeatherCardState extends State<HeroWeatherCard>
                     child: Text(
                       'Feels ${widget.telemetry.apparentTemperature.round()}°',
                       style: AppTypography.bodyMd.copyWith(
-                        color: AppColors.onSurfaceVariant,
+                        color: Colors.white.withOpacity(0.85),
                         fontWeight: FontWeight.w500,
+                        fontSize: 15,
                       ),
                     ),
                   ),
                   const Spacer(),
 
-                  // Weather Condition Animated / Glowing Floating Icon
+                  // Animated Floating Icon
                   AnimatedBuilder(
                     animation: _animController,
                     builder: (context, child) {
@@ -144,8 +187,8 @@ class _HeroWeatherCardState extends State<HeroWeatherCard>
                         child: Transform.scale(
                           scale: _glowAnimation.value,
                           child: Container(
-                            width: 72,
-                            height: 72,
+                            width: 68,
+                            height: 68,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               gradient: RadialGradient(
@@ -158,7 +201,7 @@ class _HeroWeatherCardState extends State<HeroWeatherCard>
                             child: Center(
                               child: Icon(
                                 conditionIcon,
-                                size: 48,
+                                size: 46,
                                 color: iconColor,
                               ),
                             ),
@@ -171,11 +214,10 @@ class _HeroWeatherCardState extends State<HeroWeatherCard>
               ),
               const SizedBox(height: 12),
 
-              // Telemetry Sub-row & Action Chip
+              // Humidity, Wind Speed, UV stats
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Humidity & Wind
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -186,15 +228,15 @@ class _HeroWeatherCardState extends State<HeroWeatherCard>
                               size: 15, color: AppColors.electricCyan),
                           const SizedBox(width: 3),
                           Text(
-                            'H: ${widget.telemetry.humidity}%',
+                            'Humidity ${widget.telemetry.humidity}%',
                             style: AppTypography.dataMono.copyWith(
                               fontSize: 12,
-                              color: AppColors.onSurfaceVariant,
+                              color: const Color(0xFFE2E8F0),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 14),
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -202,65 +244,30 @@ class _HeroWeatherCardState extends State<HeroWeatherCard>
                               size: 15, color: AppColors.primary),
                           const SizedBox(width: 3),
                           Text(
-                            'W: ${widget.telemetry.windSpeed.round()} km/h',
+                            'Wind ${widget.telemetry.windSpeed.round()} km/h',
                             style: AppTypography.dataMono.copyWith(
                               fontSize: 12,
-                              color: AppColors.onSurfaceVariant,
+                              color: const Color(0xFFE2E8F0),
                             ),
                           ),
                         ],
                       ),
                     ],
                   ),
-                  const SizedBox(width: 8),
-
-                  // Capsule Status Badge (Constrained with Flexible & Ellipsis)
-                  if (widget.statusChipText != null &&
-                      widget.statusChipText!.isNotEmpty)
-                    Flexible(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: (widget.statusChipColor ??
-                                  AppColors.warningAmber)
-                              .withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: (widget.statusChipColor ??
-                                    AppColors.warningAmber)
-                                .withOpacity(0.35),
-                            width: 1,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              widget.statusChipIcon ??
-                                  Icons.info_outline_rounded,
-                              size: 13,
-                              color: widget.statusChipColor ??
-                                  AppColors.warningAmber,
-                            ),
-                            const SizedBox(width: 4),
-                            Flexible(
-                              child: Text(
-                                widget.statusChipText!,
-                                style: AppTypography.labelCaps.copyWith(
-                                  fontSize: 10,
-                                  color: widget.statusChipColor ??
-                                      AppColors.warningAmber,
-                                  letterSpacing: 0.2,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.wb_sunny_outlined, size: 14, color: AppColors.warningAmber),
+                      const SizedBox(width: 3),
+                      Text(
+                        'UV ${widget.telemetry.uvIndex.toStringAsFixed(1)}',
+                        style: AppTypography.dataMono.copyWith(
+                          fontSize: 12,
+                          color: const Color(0xFFE2E8F0),
                         ),
                       ),
-                    ),
+                    ],
+                  ),
                 ],
               ),
             ],

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import '../utils/theme.dart';
+import 'package:provider/provider.dart';
+import '../providers/weather_provider.dart';
 import '../widgets/custom_bottom_nav.dart';
+import '../widgets/dynamic_weather_background.dart';
 import 'advisor_chat_screen.dart';
 import 'dashboard_screen.dart';
 import 'map_screen.dart';
@@ -14,7 +16,6 @@ class MainShellScreen extends StatefulWidget {
 
 class _MainShellScreenState extends State<MainShellScreen> {
   int _currentIndex = 0;
-  late final PageController _pageController;
 
   final List<Widget> _screens = const [
     _KeepAliveWrapper(child: DashboardScreen()),
@@ -22,54 +23,62 @@ class _MainShellScreenState extends State<MainShellScreen> {
     _KeepAliveWrapper(child: MapScreen()),
   ];
 
-  @override
-  void initState() {
-    super.initState();
-    _pageController = PageController(initialPage: _currentIndex);
-  }
-
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
-  }
-
   void _onTabTapped(int index) {
     if (_currentIndex == index) return;
     setState(() {
       _currentIndex = index;
     });
-    _pageController.animateToPage(
-      index,
-      duration: const Duration(milliseconds: 320),
-      curve: Curves.easeInOutCubic,
-    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: AppColors.appBackgroundGradient,
-      ),
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        extendBody: true,
-        body: PageView(
-          controller: _pageController,
-          physics: const NeverScrollableScrollPhysics(),
-          onPageChanged: (index) {
-            setState(() {
-              _currentIndex = index;
-            });
-          },
-          children: _screens,
-        ),
-        bottomNavigationBar: CustomBottomNav(
-          currentIndex: _currentIndex,
-          onTap: _onTabTapped,
-        ),
-      ),
+    final isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
+
+    return Consumer<WeatherProvider>(
+      builder: (context, provider, _) {
+        return DynamicWeatherBackground(
+          telemetry: provider.telemetry,
+          child: Scaffold(
+            backgroundColor: Colors.transparent,
+            resizeToAvoidBottomInset: false,
+            extendBody: true,
+            body: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 280),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeInCubic,
+              transitionBuilder: (child, animation) {
+                return FadeTransition(
+                  opacity: CurvedAnimation(
+                    parent: animation,
+                    curve: const Interval(0.2, 1.0, curve: Curves.easeOut),
+                  ),
+                  child: child,
+                );
+              },
+              child: KeyedSubtree(
+                key: ValueKey<int>(_currentIndex),
+                child: _screens[_currentIndex],
+              ),
+            ),
+            bottomNavigationBar: AnimatedSlide(
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeInOutCubic,
+              offset: isKeyboardOpen ? const Offset(0, 1.5) : Offset.zero,
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 180),
+                opacity: isKeyboardOpen ? 0.0 : 1.0,
+                child: IgnorePointer(
+                  ignoring: isKeyboardOpen,
+                  child: CustomBottomNav(
+                    currentIndex: _currentIndex,
+                    onTap: _onTabTapped,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
