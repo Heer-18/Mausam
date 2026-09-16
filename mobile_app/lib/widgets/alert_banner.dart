@@ -50,12 +50,15 @@ class AlertBanner extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Text(
-                      alert.title,
-                      style: AppTypography.titleMd.copyWith(
-                        fontSize: 15,
-                        color: alertColor,
-                        fontWeight: FontWeight.w700,
+                    Flexible(
+                      child: Text(
+                        alert.title,
+                        style: AppTypography.titleMd.copyWith(
+                          fontSize: 15,
+                          color: alertColor,
+                          fontWeight: FontWeight.w700,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     const SizedBox(width: 8),

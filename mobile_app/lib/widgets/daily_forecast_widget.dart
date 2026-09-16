@@ -79,7 +79,7 @@ class DailyForecastWidget extends StatelessWidget {
                   children: [
                     // Day Name
                     SizedBox(
-                      width: 78,
+                      width: 74,
                       child: Text(
                         dayLabel,
                         style: AppTypography.bodyMd.copyWith(
@@ -87,34 +87,42 @@ class DailyForecastWidget extends StatelessWidget {
                           fontWeight: isToday ? FontWeight.w700 : FontWeight.w500,
                           color: isToday ? Colors.white : const Color(0xFFE2E8F0),
                         ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
 
                     // Condition Icon & Rain %
                     SizedBox(
-                      width: 44,
+                      width: 52,
                       child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(icon, size: 20, color: iconColor),
+                          Icon(icon, size: 18, color: iconColor),
                           if (item.precipitationProbabilityMax > 20) ...[
                             const SizedBox(width: 2),
-                            Text(
-                              '${item.precipitationProbabilityMax}%',
-                              style: AppTypography.labelCaps.copyWith(
-                                fontSize: 9,
-                                color: AppColors.electricCyan,
-                                fontWeight: FontWeight.w700,
+                            Expanded(
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  '${item.precipitationProbabilityMax}%',
+                                  style: AppTypography.labelCaps.copyWith(
+                                    fontSize: 9,
+                                    color: AppColors.electricCyan,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
                               ),
                             ),
                           ],
                         ],
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 6),
 
                     // Min Temp
                     SizedBox(
-                      width: 32,
+                      width: 30,
                       child: Text(
                         '${item.temperatureMin.round()}°',
                         style: AppTypography.dataMono.copyWith(
@@ -125,7 +133,7 @@ class DailyForecastWidget extends StatelessWidget {
                         textAlign: TextAlign.right,
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 8),
 
                     // Gradient Visual Temperature Bar (iOS style)
                     Expanded(
@@ -164,11 +172,11 @@ class DailyForecastWidget extends StatelessWidget {
                         },
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 8),
 
                     // Max Temp
                     SizedBox(
-                      width: 32,
+                      width: 30,
                       child: Text(
                         '${item.temperatureMax.round()}°',
                         style: AppTypography.dataMono.copyWith(
