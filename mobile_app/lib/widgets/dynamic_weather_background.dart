@@ -773,24 +773,7 @@ class _AtmosphericPainter extends CustomPainter {
 
     canvas.drawCircle(sunCenter, haloRadius, chromaticHalo);
 
-    // 3. Fine Radial Diffraction Flare Rays
-    final rayPaint = Paint()
-      ..color = Colors.white.withOpacity(0.22)
-      ..strokeWidth = 1.2
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.2);
-
-    for (int i = 0; i < 8; i++) {
-      final double angle = (i * math.pi / 4.0) + (progress * 0.08);
-      const double r1 = baseRadius * 1.2;
-      final double r2 = baseRadius * (2.8 + ((i % 2) * 1.6));
-      canvas.drawLine(
-        Offset(sunCenter.dx + r1 * math.cos(angle), sunCenter.dy + r1 * math.sin(angle)),
-        Offset(sunCenter.dx + r2 * math.cos(angle), sunCenter.dy + r2 * math.sin(angle)),
-        rayPaint,
-      );
-    }
-
-    // 4. Warm Golden Inner Corona
+    // 3. Warm Golden Inner Corona
     final innerCorona = Paint()
       ..shader = RadialGradient(
         colors: [
