@@ -348,10 +348,10 @@ class _AdvisorChatScreenState extends State<AdvisorChatScreen> {
         final showGreetingHero = userMessages.isEmpty;
 
         return Scaffold(
-          backgroundColor: Colors.transparent,
+          backgroundColor: const Color(0x55090D16),
           resizeToAvoidBottomInset: true,
           appBar: AppBar(
-            backgroundColor: Colors.transparent,
+            backgroundColor: const Color(0x35090D16),
             elevation: 0,
             leading: IconButton(
               icon: const Icon(Icons.forum_outlined, color: AppColors.primary, size: 22),

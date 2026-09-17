@@ -364,30 +364,52 @@ class WeatherAtmosphereConfig {
       );
     }
 
-    // Clear Daytime (Radiant Azure Sky with Pure White Clouds if any)
+    // Clear Daytime (Radiant Natural Sky with Pure White Clouds matching reference Image 1)
     return WeatherAtmosphereConfig(
       type: WeatherAtmosphereType.clearDay,
       gradientColors: const [
-        Color(0xFF1E40AF),
-        Color(0xFF2563EB),
-        Color(0xFF3B82F6),
-        Color(0xFF60A5FA),
+        Color(0xFF386FA4), // Natural azure blue top matching Image 1
+        Color(0xFF4C82BA),
+        Color(0xFF6B9ED7),
+        Color(0xFF90BDF0), // Soft atmospheric horizon
       ],
       gradientStops: const [0.0, 0.35, 0.7, 1.0],
-      cardGlassFill: const Color(0x26FFFFFF),
-      cardGlassBorder: const Color(0x38FFFFFF),
+      cardGlassFill: const Color(0x3812233E), // High contrast frosted dark-sky glass
+      cardGlassBorder: const Color(0x45FFFFFF), // Crisp bright border
       textPrimary: Colors.white,
-      textSecondary: const Color(0xFFEFF6FF),
-      accentColor: const Color(0xFFBAE6FD),
+      textSecondary: const Color(0xFFF1F5F9),
+      accentColor: const Color(0xFF38BDF8),
       cloudBodyColor: const Color(0xFFFFFFFF), // Pure radiant white clouds on clean sky
       cloudHighlightColor: const Color(0xFFF8FAFC),
-      cloudShadowColor: const Color(0xFFE2E8F0),
+      cloudShadowColor: const Color(0xFFCBD5E1),
       cloudRimColor: const Color(0xFFFFFFFF),
       hasSun: true,
-      hasClouds: cloudCover > 10,
+      hasClouds: true, // Ensure soft ambient realistic wisps are always present
       celestialEvent: celestialEvent,
       currentTime: now,
     );
+  }
+}
+
+/// InheritedWidget providing active atmospheric styling to descendants (cards, typography)
+class WeatherAtmosphereScope extends InheritedWidget {
+  final WeatherAtmosphereConfig config;
+
+  const WeatherAtmosphereScope({
+    super.key,
+    required this.config,
+    required super.child,
+  });
+
+  static WeatherAtmosphereConfig? of(BuildContext context) {
+    return context.dependOnInheritedWidgetOfExactType<WeatherAtmosphereScope>()?.config;
+  }
+
+  @override
+  bool updateShouldNotify(WeatherAtmosphereScope oldWidget) {
+    return config.type != oldWidget.config.type ||
+        config.cardGlassFill != oldWidget.config.cardGlassFill ||
+        config.textPrimary != oldWidget.config.textPrimary;
   }
 }
 
@@ -458,8 +480,11 @@ class _DynamicWeatherBackgroundState extends State<DynamicWeatherBackground>
             },
           ),
 
-          // 2. Main App Content
-          widget.child,
+          // 2. Main App Content with Atmospheric Theme Scope
+          WeatherAtmosphereScope(
+            config: config,
+            child: widget.child,
+          ),
         ],
       ),
     );
@@ -541,30 +566,43 @@ class _ForegroundCloudPainter extends CustomPainter {
     final double w = size.width;
     final double h = size.height;
 
-    // 1. Primary Light Foreground Cumulus Mass (Drifting across upper digits with soft transparency)
-    final double x1 = (progress * (w + 280)) - 140;
+    // Dual offset continuous loop: clouds are ALWAYS gracefully draping across the lower portion of the temperature numbers
+    final double span = w + 440;
+    final double x1 = (progress * span) % span - 220;
+    final double x2 = ((progress + 0.5) * span) % span - 220;
+
+    // 1. Primary Volumetric Cloud Formation (Delicately overlapping digits with 42% opacity)
     _draw3DVolumetricCloud(
       canvas,
-      Offset(x1, h * 0.48),
-      scale: 1.15,
+      Offset(x1, h * 0.58),
+      scale: 1.25,
       bodyColor: config.cloudBodyColor,
       highlightColor: config.cloudHighlightColor,
       shadowColor: config.cloudShadowColor,
       rimColor: config.cloudRimColor,
-      opacity: 0.28, // Soft non-obscuring transparency
+      opacity: 0.42, // Beautiful visible overlap over temperature digits!
     );
 
-    // 2. Secondary Trailing Cloud Puff (Drifting lower right with very light opacity)
-    final double x2 = (((1.0 - progress * 0.85) * (w + 340)) % (w + 340)) - 170;
+    // 2. Secondary Interlaced Cloud Formation (Ensures continuous presence at all times)
     _draw3DVolumetricCloud(
       canvas,
-      Offset(x2, h * 0.62),
-      scale: 0.90,
+      Offset(x2, h * 0.65),
+      scale: 1.10,
       bodyColor: config.cloudBodyColor,
       highlightColor: config.cloudHighlightColor,
       shadowColor: config.cloudShadowColor,
       rimColor: config.cloudRimColor,
-      opacity: 0.22, // Extra light so numbers are 100% readable
+      opacity: 0.36,
+    );
+
+    // 3. Continuous Wispy Cirrus Streamer across middle of digits
+    final double wispX = ((progress * 1.4) * (w + 260)) % (w + 260) - 130;
+    final wispPaint = Paint()
+      ..color = config.cloudHighlightColor.withOpacity(0.32)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12);
+    canvas.drawOval(
+      Rect.fromCenter(center: Offset(wispX, h * 0.50), width: 150, height: 28),
+      wispPaint,
     );
   }
 
@@ -617,17 +655,17 @@ class _AtmosphericPainter extends CustomPainter {
   void _paintSun(Canvas canvas, Size size) {
     final double w = size.width;
     final double h = size.height;
-    final Offset sunCenter = Offset(w * 0.80, h * 0.12);
-    const double baseRadius = 24.0;
+    // Positioned at upper-left matching reference Image 1 (clears all top-right action buttons)
+    final Offset sunCenter = Offset(w * 0.22, h * 0.11);
+    const double baseRadius = 20.0;
 
     // Pulse breathing effect
-    final double pulse = 1.0 + 0.04 * math.sin(progress * 2 * math.pi * 3);
+    final double pulse = 1.0 + 0.03 * math.sin(progress * 2 * math.pi * 3);
 
     if (config.celestialEvent == CelestialEventType.solarEclipse) {
       // -------------------------------------------------------------
       // SURYAGRAHAN (SOLAR ECLIPSE) RENDERING
       // -------------------------------------------------------------
-      // 1. Coronal Fire Aura
       final coronaPaint = Paint()
         ..shader = RadialGradient(
           colors: [
@@ -643,14 +681,12 @@ class _AtmosphericPainter extends CustomPainter {
 
       canvas.drawCircle(sunCenter, baseRadius * 2.8 * pulse, coronaPaint);
 
-      // 2. Pitch Black Lunar Silhouette Disk (Overlapping the sun disk)
       final moonTransitPaint = Paint()
         ..color = const Color(0xFF050811)
         ..style = PaintingStyle.fill;
 
       canvas.drawCircle(Offset(sunCenter.dx + 1.2, sunCenter.dy - 0.8), baseRadius * 1.02, moonTransitPaint);
 
-      // 3. Shimmering Coronal Ring Edge
       final ringPaint = Paint()
         ..color = const Color(0xFFFEF08A).withOpacity(0.90)
         ..style = PaintingStyle.stroke
@@ -659,7 +695,6 @@ class _AtmosphericPainter extends CustomPainter {
 
       canvas.drawCircle(sunCenter, baseRadius, ringPaint);
 
-      // 4. Diamond Ring Flare Sparkle (Top-left coronal breakthrough)
       final Offset diamondPoint = Offset(sunCenter.dx - baseRadius * 0.72, sunCenter.dy - baseRadius * 0.70);
       final diamondGlow = Paint()
         ..shader = RadialGradient(
@@ -702,38 +737,107 @@ class _AtmosphericPainter extends CustomPainter {
     }
 
     // -------------------------------------------------------------
-    // RADIANT CLEAR SUN
+    // REALISTIC RADIANT STAR (Matching Reference Image 1)
     // -------------------------------------------------------------
-    // Outer Corona Flare
-    final outerCorona = Paint()
+    // 1. Wide Atmospheric Sky Bloom (Soft ambient dissipation into the sky)
+    final atmosphericBloom = Paint()
       ..shader = RadialGradient(
         colors: [
-          const Color(0xFFFEF08A).withOpacity(0.55),
-          const Color(0xFFFDE047).withOpacity(0.28),
-          const Color(0xFFF59E0B).withOpacity(0.08),
+          Colors.white.withOpacity(0.45),
+          const Color(0xFFFFFBEB).withOpacity(0.25),
+          const Color(0xFFBAE6FD).withOpacity(0.10),
           Colors.transparent,
         ],
-        stops: const [0.0, 0.45, 0.75, 1.0],
-      ).createShader(Rect.fromCircle(center: sunCenter, radius: baseRadius * 3.0 * pulse))
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12);
+        stops: const [0.0, 0.30, 0.65, 1.0],
+      ).createShader(Rect.fromCircle(center: sunCenter, radius: baseRadius * 9.0 * pulse))
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 32);
 
-    canvas.drawCircle(sunCenter, baseRadius * 2.6 * pulse, outerCorona);
+    canvas.drawCircle(sunCenter, baseRadius * 8.5 * pulse, atmosphericBloom);
 
-    // Inner Solar Core
-    final sunBody = Paint()
-      ..shader = RadialGradient(
-        center: const Alignment(-0.2, -0.2),
-        colors: const [
-          Colors.white,
-          Color(0xFFFFFBEB),
-          Color(0xFFFEF08A),
-          Color(0xFFFBBF24),
+    // 2. Chromatic Dispersion Halo Ring (Signature optical halo from Image 1)
+    const double haloRadius = baseRadius * 4.6;
+    final chromaticHalo = Paint()
+      ..shader = SweepGradient(
+        center: Alignment.center,
+        colors: [
+          const Color(0xFFFED7AA).withOpacity(0.16),
+          const Color(0xFFBAE6FD).withOpacity(0.20),
+          const Color(0xFFDDD6FE).withOpacity(0.18),
+          const Color(0xFFFEF08A).withOpacity(0.18),
+          const Color(0xFFFED7AA).withOpacity(0.16),
         ],
-        stops: const [0.0, 0.4, 0.75, 1.0],
-      ).createShader(Rect.fromCircle(center: sunCenter, radius: baseRadius))
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.8);
+      ).createShader(Rect.fromCircle(center: sunCenter, radius: haloRadius))
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 16.0
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 7);
 
-    canvas.drawCircle(sunCenter, baseRadius, sunBody);
+    canvas.drawCircle(sunCenter, haloRadius, chromaticHalo);
+
+    // 3. Fine Radial Diffraction Flare Rays
+    final rayPaint = Paint()
+      ..color = Colors.white.withOpacity(0.22)
+      ..strokeWidth = 1.2
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.2);
+
+    for (int i = 0; i < 8; i++) {
+      final double angle = (i * math.pi / 4.0) + (progress * 0.08);
+      const double r1 = baseRadius * 1.2;
+      final double r2 = baseRadius * (2.8 + ((i % 2) * 1.6));
+      canvas.drawLine(
+        Offset(sunCenter.dx + r1 * math.cos(angle), sunCenter.dy + r1 * math.sin(angle)),
+        Offset(sunCenter.dx + r2 * math.cos(angle), sunCenter.dy + r2 * math.sin(angle)),
+        rayPaint,
+      );
+    }
+
+    // 4. Warm Golden Inner Corona
+    final innerCorona = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          Colors.white.withOpacity(0.95),
+          const Color(0xFFFFFBEB).withOpacity(0.65),
+          const Color(0xFFFEF08A).withOpacity(0.30),
+          Colors.transparent,
+        ],
+        stops: const [0.0, 0.40, 0.70, 1.0],
+      ).createShader(Rect.fromCircle(center: sunCenter, radius: baseRadius * 2.8 * pulse))
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 9);
+
+    canvas.drawCircle(sunCenter, baseRadius * 2.5 * pulse, innerCorona);
+
+    // 5. Blazing Pure White Solar Disc
+    final sunBody = Paint()
+      ..color = Colors.white
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.0);
+
+    canvas.drawCircle(sunCenter, baseRadius * 0.95, sunBody);
+
+    // 6. Camera Lens Flare Bokeh Orbs (Diagonally down-right along optical axis)
+    const double flareVecX = 0.65;
+    const double flareVecY = 0.85;
+
+    // Orb 1: Soft Cyan Prismatic Ring
+    final Offset orb1 = Offset(sunCenter.dx + 85 * flareVecX, sunCenter.dy + 85 * flareVecY);
+    final orb1Paint = Paint()
+      ..color = const Color(0xFFBAE6FD).withOpacity(0.14)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
+    canvas.drawCircle(orb1, 22, orb1Paint);
+
+    // Orb 2: Warm Golden Diffuse Disk
+    final Offset orb2 = Offset(sunCenter.dx + 165 * flareVecX, sunCenter.dy + 165 * flareVecY);
+    final orb2Paint = Paint()
+      ..color = const Color(0xFFFEF08A).withOpacity(0.09)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
+    canvas.drawCircle(orb2, 32, orb2Paint);
+
+    // Orb 3: Violet / Magenta Aperture Artifact
+    final Offset orb3 = Offset(sunCenter.dx + 255 * flareVecX, sunCenter.dy + 255 * flareVecY);
+    final orb3Paint = Paint()
+      ..color = const Color(0xFFC084FC).withOpacity(0.07)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12);
+    canvas.drawCircle(orb3, 18, orb3Paint);
   }
 
   void _paintMoon(Canvas canvas, Size size) {
@@ -937,11 +1041,35 @@ class _AtmosphericPainter extends CustomPainter {
     final double w = size.width;
     final double h = size.height;
 
-    // Background Cloud 1: High-altitude atmospheric drift (gentle, majestic)
-    final double offset1 = (progress * (w + 320)) - 160;
+    // 1. High-altitude feathered cirrus ribbons across upper sky (Image 1 realism)
+    final cirrusPaint = Paint()
+      ..color = config.cloudHighlightColor.withOpacity(0.18)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 16);
+
+    final double cirrusDrift = (progress * 100) % (w + 240) - 120;
+    final Path cirrus1 = Path();
+    cirrus1.moveTo(cirrusDrift - 80, h * 0.08);
+    cirrus1.quadraticBezierTo(cirrusDrift + w * 0.35, h * 0.04, cirrusDrift + w * 0.75, h * 0.09);
+    cirrus1.quadraticBezierTo(cirrusDrift + w * 0.95, h * 0.11, cirrusDrift + w + 100, h * 0.07);
+    cirrus1.lineTo(cirrusDrift + w + 100, h * 0.12);
+    cirrus1.quadraticBezierTo(cirrusDrift + w * 0.60, h * 0.14, cirrusDrift - 80, h * 0.11);
+    cirrus1.close();
+    canvas.drawPath(cirrus1, cirrusPaint);
+
+    final Path cirrus2 = Path();
+    final double cirrusDrift2 = (((1.0 - progress) * 80) % (w + 240)) - 120;
+    cirrus2.moveTo(cirrusDrift2 - 60, h * 0.16);
+    cirrus2.quadraticBezierTo(cirrusDrift2 + w * 0.40, h * 0.13, cirrusDrift2 + w * 0.85, h * 0.18);
+    cirrus2.lineTo(cirrusDrift2 + w * 0.85, h * 0.21);
+    cirrus2.quadraticBezierTo(cirrusDrift2 + w * 0.35, h * 0.20, cirrusDrift2 - 60, h * 0.19);
+    cirrus2.close();
+    canvas.drawPath(cirrus2, cirrusPaint);
+
+    // 2. Background Cloud 1: High-altitude atmospheric drift
+    final double offset1 = (progress * (w + 340)) - 170;
     _draw3DVolumetricCloud(
       canvas,
-      Offset(offset1, h * 0.12),
+      Offset(offset1, h * 0.13),
       scale: 1.35,
       bodyColor: config.cloudBodyColor,
       highlightColor: config.cloudHighlightColor,
@@ -950,17 +1078,17 @@ class _AtmosphericPainter extends CustomPainter {
       opacity: 0.52,
     );
 
-    // Background Cloud 2: Mid-level soft cumulus cloud drifting from right to left
-    final double offset2 = (((1.0 - progress * 0.7) * (w + 280)) % (w + 280)) - 140;
+    // 3. Background Cloud 2: Mid-level soft cumulus cloud drifting from right to left
+    final double offset2 = (((1.0 - progress * 0.7) * (w + 300)) % (w + 300)) - 150;
     _draw3DVolumetricCloud(
       canvas,
-      Offset(offset2, h * 0.26),
-      scale: 1.10,
+      Offset(offset2, h * 0.25),
+      scale: 1.15,
       bodyColor: config.cloudBodyColor,
       highlightColor: config.cloudHighlightColor,
       shadowColor: config.cloudShadowColor,
       rimColor: config.cloudRimColor,
-      opacity: 0.42,
+      opacity: 0.44,
     );
   }
 
@@ -1126,7 +1254,7 @@ void _draw3DVolumetricCloud(
       height: lobe.radiusY * 2,
     );
 
-    // 3D Spherical Light Shader
+    // 3D Spherical Light Shader with organic atmospheric feathering
     final lobePaint = Paint()
       ..shader = RadialGradient(
         center: const Alignment(-0.35, -0.45),
@@ -1138,12 +1266,12 @@ void _draw3DVolumetricCloud(
         ],
         stops: const [0.0, 0.52, 1.0],
       ).createShader(rect)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5.5);
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 9.0);
 
     canvas.drawOval(rect, lobePaint);
   }
 
-  // 3. Lit Top Crest Rim Highlights
+  // 3. Lit Top Crest Rim Highlights (Soft atmospheric sun reflection)
   final rimPaint = Paint()
     ..shader = LinearGradient(
       begin: Alignment.topCenter,
@@ -1154,18 +1282,18 @@ void _draw3DVolumetricCloud(
       ],
       stops: const [0.0, 0.75],
     ).createShader(const Rect.fromLTWH(-70, -35, 140, 50))
-    ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3.5);
+    ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6.0);
 
   canvas.drawOval(
-    Rect.fromCenter(center: const Offset(2, -20), width: 48, height: 22),
+    Rect.fromCenter(center: const Offset(2, -20), width: 52, height: 24),
     rimPaint,
   );
   canvas.drawOval(
-    Rect.fromCenter(center: const Offset(-28, -6), width: 44, height: 20),
+    Rect.fromCenter(center: const Offset(-28, -6), width: 46, height: 22),
     rimPaint,
   );
   canvas.drawOval(
-    Rect.fromCenter(center: const Offset(30, -4), width: 44, height: 20),
+    Rect.fromCenter(center: const Offset(30, -4), width: 46, height: 22),
     rimPaint,
   );
 

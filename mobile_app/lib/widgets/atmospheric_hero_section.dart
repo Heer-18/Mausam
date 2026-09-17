@@ -249,25 +249,31 @@ class AtmosphericHeroSection extends StatelessWidget {
 
         const SizedBox(height: 10),
 
-        // 2. Display Temperature with Overlapping Dynamic Cloud Layer Stack & Counting Animation
+        // 2. Display Temperature with Overlapping Dynamic Cloud Layer Stack
         SizedBox(
           height: 140,
           child: Stack(
             alignment: Alignment.center,
             children: [
-              // Hero Big Temperature Text with Smooth Increasing Animation
+              // Hero Big Temperature Text with High Contrast Shadow
               Center(
-                child: TweenAnimationBuilder<double>(
-                  tween: Tween<double>(begin: 0, end: telemetry.currentTemperature),
-                  duration: const Duration(milliseconds: 1000),
-                  curve: Curves.easeOutCubic,
-                  builder: (context, val, _) {
-                    return Text(
-                      '${val.round()}°',
-                      style: AppTypography.displayTemp,
-                      textAlign: TextAlign.center,
-                    );
-                  },
+                child: Text(
+                  '${telemetry.currentTemperature.round()}°',
+                  style: AppTypography.displayTemp.copyWith(
+                    shadows: const [
+                      Shadow(
+                        color: Color(0x66000000),
+                        blurRadius: 16,
+                        offset: Offset(0, 3),
+                      ),
+                      Shadow(
+                        color: Color(0x33000000),
+                        blurRadius: 30,
+                        offset: Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  textAlign: TextAlign.center,
                 ),
               ),
 

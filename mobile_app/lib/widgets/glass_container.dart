@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../utils/theme.dart';
+import 'dynamic_weather_background.dart';
 
 class GlassContainer extends StatelessWidget {
   final Widget child;
@@ -26,11 +27,11 @@ class GlassContainer extends StatelessWidget {
     this.padding = const EdgeInsets.all(16.0),
     this.margin,
     this.borderRadius = 20.0,
-    this.fillColor = AppColors.glassFill,
-    this.borderColor = AppColors.glassBorder,
+    this.fillColor,
+    this.borderColor,
     this.borderWidth = 1.0,
-    this.blurSigma = 0.0,
-    this.useBlur = false,
+    this.blurSigma = 12.0,
+    this.useBlur = true,
     this.onTap,
     this.gradient,
     this.boxShadow,
@@ -38,14 +39,18 @@ class GlassContainer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final atmosphere = WeatherAtmosphereScope.of(context);
+    final effectiveFill = fillColor ?? atmosphere?.cardGlassFill ?? AppColors.glassFill;
+    final effectiveBorder = borderColor ?? atmosphere?.cardGlassBorder ?? AppColors.glassBorder;
+
     Widget innerBox = Container(
       padding: padding,
       decoration: BoxDecoration(
-        color: gradient == null ? fillColor : null,
+        color: gradient == null ? effectiveFill : null,
         gradient: gradient,
         borderRadius: BorderRadius.circular(borderRadius),
         border: Border.all(
-          color: borderColor ?? AppColors.glassBorder,
+          color: effectiveBorder,
           width: borderWidth,
         ),
       ),

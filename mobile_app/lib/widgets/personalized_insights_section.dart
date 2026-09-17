@@ -5,7 +5,7 @@ import '../utils/theme.dart';
 import 'glass_container.dart';
 import 'persona_modal.dart';
 
-class PersonalizedInsightsSection extends StatelessWidget {
+class PersonalizedInsightsSection extends StatefulWidget {
   final PersonaType persona;
   final List<PersonaSlotData> slots;
   final String advisorySummary;
@@ -24,7 +24,23 @@ class PersonalizedInsightsSection extends StatelessWidget {
   });
 
   @override
+  State<PersonalizedInsightsSection> createState() => _PersonalizedInsightsSectionState();
+}
+
+class _PersonalizedInsightsSectionState extends State<PersonalizedInsightsSection>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
   Widget build(BuildContext context) {
+    super.build(context);
+    final persona = widget.persona;
+    final slots = widget.slots;
+    final advisorySummary = widget.advisorySummary;
+    final actionBullet = widget.actionBullet;
+    final onChangePersona = widget.onChangePersona;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -279,97 +295,76 @@ class PersonalizedInsightsSection extends StatelessWidget {
   }
 
   Widget _buildParameterSlotCard(PersonaSlotData slot, int index) {
-    return TweenAnimationBuilder<double>(
-      key: ValueKey('${slot.title}_${slot.value}'),
-      tween: Tween<double>(begin: 0.0, end: 1.0),
-      duration: Duration(milliseconds: 400 + (index * 60).clamp(0, 400)),
-      curve: Curves.easeOutCubic,
-      builder: (context, animVal, child) {
-        return Opacity(
-          opacity: animVal,
-          child: Transform.translate(
-            offset: Offset(0, (1.0 - animVal) * 10),
-            child: child,
-          ),
-        );
-      },
-      child: GlassContainer(
-        padding: const EdgeInsets.all(12.0),
-        borderRadius: 18.0,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            // Header Row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    slot.title,
-                    style: AppTypography.labelCaps.copyWith(
-                      fontSize: 10,
-                      letterSpacing: 0.6,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                Icon(slot.icon, size: 16, color: slot.color),
-              ],
-            ),
-
-            const SizedBox(height: 6),
-
-            // Value and Subtitle (Constant real data, stable on scroll)
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  slot.value,
-                  style: AppTypography.titleMd.copyWith(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
+    return GlassContainer(
+      padding: const EdgeInsets.all(12.0),
+      borderRadius: 18.0,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // Header Row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  slot.title,
+                  style: AppTypography.labelCaps.copyWith(
+                    fontSize: 10,
+                    letterSpacing: 0.6,
+                    color: const Color(0xFFCBD5E1),
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  slot.subtitle,
-                  style: AppTypography.bodySm.copyWith(
-                    fontSize: 11,
-                    color: AppColors.onSurfaceVariant,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 6),
-
-            // Animated Progress Bar (Fills smoothly to exact constant percentage)
-            if (slot.progressPercentage != null)
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: TweenAnimationBuilder<double>(
-                  key: ValueKey('${slot.title}_progress_${slot.progressPercentage}'),
-                  tween: Tween<double>(begin: 0.0, end: slot.progressPercentage!.clamp(0.0, 1.0)),
-                  duration: const Duration(milliseconds: 800),
-                  curve: Curves.easeOutCubic,
-                  builder: (context, val, child) {
-                    return LinearProgressIndicator(
-                      value: val,
-                      backgroundColor: Colors.white.withOpacity(0.06),
-                      valueColor: AlwaysStoppedAnimation<Color>(slot.color.withOpacity(0.85)),
-                      minHeight: 3.0,
-                    );
-                  },
                 ),
               ),
-          ],
-        ),
+              Icon(slot.icon, size: 16, color: slot.color),
+            ],
+          ),
+
+          const SizedBox(height: 6),
+
+          // Value and Subtitle (Constant real data, stable on scroll)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                slot.value,
+                style: AppTypography.titleMd.copyWith(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 2),
+              Text(
+                slot.subtitle,
+                style: AppTypography.bodySm.copyWith(
+                  fontSize: 11,
+                  color: const Color(0xFFE2E8F0),
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 6),
+
+          // Steady Progress Bar (No reloading or color shifts on scroll)
+          if (slot.progressPercentage != null)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: slot.progressPercentage!.clamp(0.0, 1.0),
+                backgroundColor: Colors.white.withOpacity(0.10),
+                valueColor: AlwaysStoppedAnimation<Color>(slot.color.withOpacity(0.90)),
+                minHeight: 3.0,
+              ),
+            ),
+        ],
       ),
     );
   }
