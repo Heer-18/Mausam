@@ -30,7 +30,7 @@ class GlassContainer extends StatelessWidget {
     this.fillColor,
     this.borderColor,
     this.borderWidth = 1.0,
-    this.blurSigma = 12.0,
+    this.blurSigma = 8.0,
     this.useBlur = true,
     this.onTap,
     this.gradient,

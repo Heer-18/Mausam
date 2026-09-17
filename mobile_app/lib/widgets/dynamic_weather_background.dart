@@ -102,8 +102,8 @@ class WeatherAtmosphereConfig {
           Color(0xFF1E293B),
         ],
         gradientStops: const [0.0, 0.35, 0.7, 1.0],
-        cardGlassFill: const Color(0x2E1E1B4B),
-        cardGlassBorder: const Color(0x40818CF8),
+        cardGlassFill: const Color(0xC6161438),
+        cardGlassBorder: const Color(0x38818CF8),
         textPrimary: Colors.white,
         textSecondary: const Color(0xFFCBD5E1),
         accentColor: const Color(0xFFA855F7),
@@ -140,8 +140,8 @@ class WeatherAtmosphereConfig {
                 Color(0xFF283548),
               ],
         gradientStops: const [0.0, 0.4, 0.75, 1.0],
-        cardGlassFill: const Color(0x331E293B),
-        cardGlassBorder: const Color(0x3394A3B8),
+        cardGlassFill: const Color(0xC6162234),
+        cardGlassBorder: const Color(0x3094A3B8),
         textPrimary: Colors.white,
         textSecondary: const Color(0xFFE2E8F0),
         accentColor: const Color(0xFF38BDF8),
@@ -170,8 +170,8 @@ class WeatherAtmosphereConfig {
           Color(0xFF94A3B8),
         ],
         gradientStops: const [0.0, 0.35, 0.7, 1.0],
-        cardGlassFill: const Color(0x33FFFFFF),
-        cardGlassBorder: const Color(0x4DFFFFFF),
+        cardGlassFill: const Color(0xC41A283D),
+        cardGlassBorder: const Color(0x35FFFFFF),
         textPrimary: Colors.white,
         textSecondary: const Color(0xFFF1F5F9),
         accentColor: const Color(0xFF7DD3FC),
@@ -199,8 +199,8 @@ class WeatherAtmosphereConfig {
           Color(0xFF3B485A),
         ],
         gradientStops: const [0.0, 0.3, 0.65, 1.0],
-        cardGlassFill: const Color(0x29FFFFFF),
-        cardGlassBorder: const Color(0x2EFFFFFF),
+        cardGlassFill: const Color(0xC4182438),
+        cardGlassBorder: const Color(0x33FFFFFF),
         textPrimary: Colors.white,
         textSecondary: const Color(0xFFE2E8F0),
         accentColor: const Color(0xFF94A3B8),
@@ -230,7 +230,7 @@ class WeatherAtmosphereConfig {
             Color(0xFFB07D7B),
           ],
           gradientStops: const [0.0, 0.28, 0.55, 0.78, 1.0],
-          cardGlassFill: const Color(0x2BFFFFFF),
+          cardGlassFill: const Color(0xC41E1A33),
           cardGlassBorder: const Color(0x38FFFFFF),
           textPrimary: Colors.white,
           textSecondary: const Color(0xFFF1F5F9),
@@ -257,8 +257,8 @@ class WeatherAtmosphereConfig {
             Color(0xFF111827),
           ],
           gradientStops: const [0.0, 0.35, 0.7, 1.0],
-          cardGlassFill: const Color(0x261E293B),
-          cardGlassBorder: const Color(0x2BFFFFFF),
+          cardGlassFill: const Color(0xC80F1829),
+          cardGlassBorder: const Color(0x2EFFFFFF),
           textPrimary: Colors.white,
           textSecondary: const Color(0xFFCBD5E1),
           accentColor: const Color(0xFF93C5FD),
@@ -292,8 +292,8 @@ class WeatherAtmosphereConfig {
                 Color(0xFF6B83A8),
               ],
         gradientStops: const [0.0, 0.35, 0.7, 1.0],
-        cardGlassFill: const Color(0x29FFFFFF),
-        cardGlassBorder: const Color(0x38FFFFFF),
+        cardGlassFill: const Color(0xC4152136),
+        cardGlassBorder: const Color(0x33FFFFFF),
         textPrimary: Colors.white,
         textSecondary: const Color(0xFFF8FAFC),
         accentColor: const Color(0xFFBAE6FD),
@@ -320,7 +320,7 @@ class WeatherAtmosphereConfig {
           Color(0xFF0F172A),
         ],
         gradientStops: const [0.0, 0.3, 0.65, 1.0],
-        cardGlassFill: const Color(0x241E293B),
+        cardGlassFill: const Color(0xC80B1322),
         cardGlassBorder: const Color(0x2EFFFFFF),
         textPrimary: Colors.white,
         textSecondary: const Color(0xFFCBD5E1),
@@ -348,8 +348,8 @@ class WeatherAtmosphereConfig {
           Color(0xFFF59E0B),
         ],
         gradientStops: const [0.0, 0.25, 0.5, 0.75, 1.0],
-        cardGlassFill: const Color(0x2EFFFFFF),
-        cardGlassBorder: const Color(0x40FFFFFF),
+        cardGlassFill: const Color(0xC41E152F),
+        cardGlassBorder: const Color(0x3BFFFFFF),
         textPrimary: Colors.white,
         textSecondary: const Color(0xFFFFFBEB),
         accentColor: const Color(0xFFFDE68A),
@@ -374,8 +374,8 @@ class WeatherAtmosphereConfig {
         Color(0xFF90BDF0), // Soft atmospheric horizon
       ],
       gradientStops: const [0.0, 0.35, 0.7, 1.0],
-      cardGlassFill: const Color(0x3812233E), // High contrast frosted dark-sky glass
-      cardGlassBorder: const Color(0x45FFFFFF), // Crisp bright border
+      cardGlassFill: const Color(0xC4111E33), // Rich, uniform midnight glass (prevents background bleed-through)
+      cardGlassBorder: const Color(0x35FFFFFF), // Crisp bright border
       textPrimary: Colors.white,
       textSecondary: const Color(0xFFF1F5F9),
       accentColor: const Color(0xFF38BDF8),
@@ -739,23 +739,23 @@ class _AtmosphericPainter extends CustomPainter {
     // -------------------------------------------------------------
     // REALISTIC RADIANT STAR (Matching Reference Image 1)
     // -------------------------------------------------------------
-    // 1. Wide Atmospheric Sky Bloom (Soft ambient dissipation into the sky)
+    // 1. Wide Atmospheric Sky Bloom (Soft ambient dissipation focused in upper sky)
     final atmosphericBloom = Paint()
       ..shader = RadialGradient(
         colors: [
-          Colors.white.withOpacity(0.45),
-          const Color(0xFFFFFBEB).withOpacity(0.25),
-          const Color(0xFFBAE6FD).withOpacity(0.10),
+          Colors.white.withOpacity(0.38),
+          const Color(0xFFFFFBEB).withOpacity(0.18),
+          const Color(0xFFBAE6FD).withOpacity(0.06),
           Colors.transparent,
         ],
-        stops: const [0.0, 0.30, 0.65, 1.0],
-      ).createShader(Rect.fromCircle(center: sunCenter, radius: baseRadius * 9.0 * pulse))
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 32);
+        stops: const [0.0, 0.35, 0.70, 1.0],
+      ).createShader(Rect.fromCircle(center: sunCenter, radius: baseRadius * 5.6 * pulse))
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 20);
 
-    canvas.drawCircle(sunCenter, baseRadius * 8.5 * pulse, atmosphericBloom);
+    canvas.drawCircle(sunCenter, baseRadius * 5.2 * pulse, atmosphericBloom);
 
     // 2. Chromatic Dispersion Halo Ring (Signature optical halo from Image 1)
-    const double haloRadius = baseRadius * 4.6;
+    const double haloRadius = baseRadius * 4.4;
     final chromaticHalo = Paint()
       ..shader = SweepGradient(
         center: Alignment.center,
@@ -768,8 +768,8 @@ class _AtmosphericPainter extends CustomPainter {
         ],
       ).createShader(Rect.fromCircle(center: sunCenter, radius: haloRadius))
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 16.0
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 7);
+      ..strokeWidth = 14.0
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
 
     canvas.drawCircle(sunCenter, haloRadius, chromaticHalo);
 
@@ -795,32 +795,32 @@ class _AtmosphericPainter extends CustomPainter {
 
     canvas.drawCircle(sunCenter, baseRadius * 0.95, sunBody);
 
-    // 6. Camera Lens Flare Bokeh Orbs (Diagonally down-right along optical axis)
-    const double flareVecX = 0.65;
-    const double flareVecY = 0.85;
+    // 6. Camera Lens Flare Bokeh Orbs (Diagonally across upper sky, away from card bounds)
+    const double flareVecX = 0.85;
+    const double flareVecY = 0.35;
 
     // Orb 1: Soft Cyan Prismatic Ring
-    final Offset orb1 = Offset(sunCenter.dx + 85 * flareVecX, sunCenter.dy + 85 * flareVecY);
+    final Offset orb1 = Offset(sunCenter.dx + 80 * flareVecX, sunCenter.dy + 80 * flareVecY);
     final orb1Paint = Paint()
       ..color = const Color(0xFFBAE6FD).withOpacity(0.14)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.0
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
-    canvas.drawCircle(orb1, 22, orb1Paint);
+    canvas.drawCircle(orb1, 20, orb1Paint);
 
     // Orb 2: Warm Golden Diffuse Disk
-    final Offset orb2 = Offset(sunCenter.dx + 165 * flareVecX, sunCenter.dy + 165 * flareVecY);
+    final Offset orb2 = Offset(sunCenter.dx + 155 * flareVecX, sunCenter.dy + 155 * flareVecY);
     final orb2Paint = Paint()
       ..color = const Color(0xFFFEF08A).withOpacity(0.09)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
-    canvas.drawCircle(orb2, 32, orb2Paint);
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 9);
+    canvas.drawCircle(orb2, 28, orb2Paint);
 
     // Orb 3: Violet / Magenta Aperture Artifact
-    final Offset orb3 = Offset(sunCenter.dx + 255 * flareVecX, sunCenter.dy + 255 * flareVecY);
+    final Offset orb3 = Offset(sunCenter.dx + 235 * flareVecX, sunCenter.dy + 235 * flareVecY);
     final orb3Paint = Paint()
       ..color = const Color(0xFFC084FC).withOpacity(0.07)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12);
-    canvas.drawCircle(orb3, 18, orb3Paint);
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
+    canvas.drawCircle(orb3, 16, orb3Paint);
   }
 
   void _paintMoon(Canvas canvas, Size size) {

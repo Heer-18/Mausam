@@ -24,9 +24,9 @@ class AppColors {
   static const Color agriEmerald = Color(0xFF10B981);
   static const Color fitnessViolet = Color(0xFF8B5CF6);
 
-  static const Color glassFill = Color(0x0DFFFFFF);
-  static const Color glassBorder = Color(0x1AFFFFFF);
-  static const Color glassBorderBright = Color(0x33FFFFFF);
+  static const Color glassFill = Color(0xC4111E33);
+  static const Color glassBorder = Color(0x35FFFFFF);
+  static const Color glassBorderBright = Color(0x4DFFFFFF);
   static const Color glassHighlight = Color(0x26ADC6FF);
 
   static const LinearGradient appBackgroundGradient = LinearGradient(

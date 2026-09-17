@@ -40,8 +40,6 @@ class CelestialAlmanacCard extends StatelessWidget {
     return GlassContainer(
       padding: const EdgeInsets.all(16.0),
       borderRadius: 24.0,
-      fillColor: const Color(0xFF0F172A).withOpacity(0.4),
-      borderColor: Colors.white.withOpacity(0.18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

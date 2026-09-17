@@ -67,17 +67,17 @@ class HourlyForecastWidget extends StatelessWidget {
                 child: GlassContainer(
                   width: 82,
                   padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 8.0),
-                  borderRadius: 18.0,
+                  borderRadius: 26.0,
                   fillColor: isCurrentHour
-                      ? AppColors.primary.withOpacity(0.12)
+                      ? AppColors.primary.withOpacity(0.18)
                       : (item.isBestRunningHour
-                          ? AppColors.fitnessViolet.withOpacity(0.12)
-                          : AppColors.glassFill),
+                          ? AppColors.fitnessViolet.withOpacity(0.18)
+                          : null),
                   borderColor: isCurrentHour
-                      ? AppColors.primary.withOpacity(0.4)
+                      ? AppColors.primary.withOpacity(0.55)
                       : (item.isBestRunningHour
-                          ? AppColors.fitnessViolet.withOpacity(0.4)
-                          : AppColors.glassBorder),
+                          ? AppColors.fitnessViolet.withOpacity(0.45)
+                          : null),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -113,10 +113,10 @@ class HourlyForecastWidget extends StatelessWidget {
                       // Animated Rain Probability or Running badge
                       if (item.isBestRunningHour)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             color: AppColors.fitnessViolet.withOpacity(0.25),
-                            borderRadius: BorderRadius.circular(4),
+                            borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
                             'RUN',
